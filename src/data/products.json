@@ -1,0 +1,244 @@
+{
+  "products": [
+    {
+      "id": "alpha-lipoic-acid",
+      "name": "Alpha Lipoic Acid",
+      "price": 350,
+      "currency": "R",
+      "description": "Powerful antioxidant supplement that supports cellular energy production and helps protect against oxidative stress.",
+      "image": "/Aplha-Lipoic-Acid-B-1-551x1024.png",
+      "category": "Antioxidants",
+      "featured": true,
+      "benefits": [
+        "Powerful antioxidant protection",
+        "Supports healthy blood sugar levels",
+        "Promotes nerve health",
+        "Enhances cellular energy"
+      ]
+    },
+    {
+      "id": "magnesium",
+      "name": "Magnesium Glycinate",
+      "price": 250,
+      "currency": "R",
+      "description": "Essential mineral that supports muscle function, bone health, and cardiovascular wellness.",
+      "image": "/Magnesium-Blue-1-551x1024.png",
+      "category": "Minerals",
+      "featured": true,
+      "benefits": [
+        "Supports muscle and nerve function",
+        "Promotes bone health",
+        "Helps maintain heart health",
+        "Aids in energy production"
+      ]
+    },
+    {
+      "id": "oxidation-immuno",
+      "name": "Oxidation Immuno",
+      "price": 249,
+      "currency": "R",
+      "description": "Comprehensive immune support formula with powerful antioxidants to strengthen your body's natural defenses.",
+      "image": "/Oxidation-Immuno-B-1-551x1024.png",
+      "category": "Immune Support",
+      "featured": true,
+      "benefits": [
+        "Strengthens immune system",
+        "Antioxidant protection",
+        "Supports overall wellness",
+        "Enhances natural defenses"
+      ]
+    },
+    {
+      "id": "iron",
+      "name": "Oxidation Iron Penta",
+      "price": 250,
+      "currency": "R",
+      "description": "High-quality iron supplement that supports healthy red blood cell production and energy levels.",
+      "image": "/Iron-1-551x1024.png",
+      "category": "Minerals",
+      "featured": false,
+      "benefits": [
+        "Supports healthy red blood cells",
+        "Combats fatigue",
+        "Improves energy levels",
+        "Essential for oxygen transport"
+      ]
+    },
+    {
+      "id": "collagen",
+      "name": "Collagen Type I & III with Vitamin C",
+      "price": 200,
+      "currency": "R",
+      "description": "Premium collagen supplement for skin elasticity, joint health, and overall beauty from within.",
+      "image": "/Collagen-B-1-551x1024.png",
+      "category": "Beauty & Wellness",
+      "featured": true,
+      "benefits": [
+        "Supports skin elasticity",
+        "Promotes joint health",
+        "Strengthens hair and nails",
+        "Anti-aging properties"
+      ]
+    },
+    {
+      "id": "oxidation-nutri",
+      "name": "Oxidation Nutri",
+      "price": 249,
+      "currency": "R",
+      "description": "Comprehensive nutritional support with antioxidants to promote overall health and vitality.",
+      "image": "/Oxdation-Nutri-B-1-551x1024.png",
+      "category": "Nutrition",
+      "featured": false,
+      "benefits": [
+        "Complete nutritional support",
+        "Rich in antioxidants",
+        "Supports cellular health",
+        "Enhances vitality"
+      ]
+    },
+    {
+      "id": "entero",
+      "name": "Oxidation Entero",
+      "price": 245,
+      "currency": "R",
+      "description": "Advanced digestive health formula that supports gut health and optimal nutrient absorption.",
+      "image": "/Entero-1-551x1024.png",
+      "category": "Digestive Health",
+      "featured": true,
+      "benefits": [
+        "Supports digestive health",
+        "Promotes gut balance",
+        "Enhances nutrient absorption",
+        "Improves digestive comfort"
+      ]
+    },
+    {
+      "id": "omega-3",
+      "name": "Oxidation Omega 3",
+      "price": 125,
+      "currency": "R",
+      "description": "High-potency Omega-3 fatty acids for heart health, brain function, and anti-inflammatory support.",
+      "image": "/Oxidation-Omega-3-B-2-551x1024.png",
+      "category": "Heart Health",
+      "featured": true,
+      "benefits": [
+        "Supports cardiovascular health",
+        "Enhances brain function",
+        "Anti-inflammatory properties",
+        "Promotes healthy triglycerides"
+      ]
+    },
+    {
+      "id": "vitaminerals",
+      "name": "Oxidation VitaMinerals",
+      "price": 500,
+      "currency": "R",
+      "description": "Complete multivitamin and mineral formula for comprehensive daily nutritional support.",
+      "image": "/Vitaminerals-551x1024.png",
+      "category": "Multivitamins",
+      "featured": true,
+      "benefits": [
+        "Complete daily nutrition",
+        "Essential vitamins and minerals",
+        "Supports overall health",
+        "Boosts energy and vitality"
+      ]
+    },
+    {
+      "id": "vitaminerals-start",
+      "name": "Oxidation VitaMinerals Start",
+      "price": 399,
+      "currency": "R",
+      "description": "Beginner-friendly multivitamin formula perfect for starting your wellness journey.",
+      "image": "/Vitaminerals-Start-551x1024.png",
+      "category": "Multivitamins",
+      "featured": true,
+      "benefits": [
+        "Perfect for beginners",
+        "Balanced nutrition",
+        "Easy to digest",
+        "Gentle on the stomach"
+      ]
+    },
+    {
+      "id": "sleep-eye-mask",
+      "name": "Contoured Sleep Eye Mask",
+      "price": 200,
+      "currency": "R",
+      "description": "Premium contoured sleep eye mask designed for ultimate comfort and complete light blockage for restful sleep.",
+      "image": "/Contoured-Sleep-Eye-Mask.png",
+      "category": "Wellness Accessories",
+      "featured": true,
+      "benefits": [
+        "Complete light blockage",
+        "Contoured for comfort",
+        "Promotes better sleep quality",
+        "Gentle on eyes and skin"
+      ]
+    },
+    {
+      "id": "silver-package",
+      "name": "Silver Standard Package",
+      "price": 845,
+      "currency": "R",
+      "description": "Curated wellness package with essential supplements to kickstart your health journey.",
+      "image": "/Silver-Standard-Package.png",
+      "category": "Wellness Packages",
+      "featured": true,
+      "benefits": [
+        "Essential wellness support",
+        "Cost-effective bundle",
+        "Comprehensive nutrition",
+        "Perfect for beginners"
+      ]
+    },
+    {
+      "id": "gold-package",
+      "name": "Gold Standard Package",
+      "price": 1000,
+      "currency": "R",
+      "description": "Premium wellness package combining our most popular supplements for comprehensive health support.",
+      "image": "/Gold-Standard-Package.png",
+      "category": "Wellness Packages",
+      "featured": true,
+      "benefits": [
+        "Complete wellness solution",
+        "Enhanced value bundle",
+        "Advanced nutritional support",
+        "Targets multiple health areas"
+      ]
+    },
+    {
+      "id": "platinum-package",
+      "name": "Platinum Standard Package",
+      "price": 1450,
+      "currency": "R",
+      "description": "Elite wellness package featuring premium supplements for those serious about their health.",
+      "image": "/Platinum-Standard-Package.png",
+      "category": "Wellness Packages",
+      "featured": true,
+      "benefits": [
+        "Premium supplement collection",
+        "Maximum health benefits",
+        "Superior nutritional coverage",
+        "Best value for money"
+      ]
+    },
+    {
+      "id": "diamond-package",
+      "name": "Diamond Standard Package",
+      "price": 1600,
+      "currency": "R",
+      "description": "The ultimate wellness package with our complete range of supplements for total health transformation.",
+      "image": "/Diamond-Standard-Package.png",
+      "category": "Wellness Packages",
+      "featured": true,
+      "benefits": [
+        "Complete supplement range",
+        "Ultimate health optimization",
+        "All-inclusive wellness support",
+        "Premium customer experience"
+      ]
+    }
+  ]
+}

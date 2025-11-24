@@ -1,0 +1,117 @@
+/* Custom Calendar Styling */
+.booking-calendar .react-calendar {
+  width: 100%;
+  border: none;
+  font-family: 'Raleway', sans-serif;
+}
+
+.booking-calendar .react-calendar__navigation {
+  margin-bottom: 1rem;
+  height: 50px;
+}
+
+.booking-calendar .react-calendar__navigation button {
+  min-width: 50px;
+  background: none;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #2A7F3E;
+}
+
+.booking-calendar .react-calendar__navigation button:enabled:hover,
+.booking-calendar .react-calendar__navigation button:enabled:focus {
+  background-color: #E8F5E9;
+  border-radius: 8px;
+}
+
+.booking-calendar .react-calendar__navigation button:disabled {
+  background-color: transparent;
+  color: #ccc;
+}
+
+.booking-calendar .react-calendar__month-view__weekdays {
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #666;
+  text-transform: uppercase;
+}
+
+.booking-calendar .react-calendar__month-view__weekdays__weekday {
+  padding: 0.75rem 0;
+}
+
+.booking-calendar .react-calendar__month-view__weekdays abbr {
+  text-decoration: none;
+}
+
+.booking-calendar .react-calendar__tile {
+  padding: 1rem;
+  background: none;
+  text-align: center;
+  font-size: 0.95rem;
+  border-radius: 8px;
+  margin: 2px;
+  transition: all 0.2s;
+}
+
+.booking-calendar .react-calendar__tile:enabled:hover,
+.booking-calendar .react-calendar__tile:enabled:focus {
+  background-color: #E8F5E9;
+  color: #2A7F3E;
+}
+
+.booking-calendar .react-calendar__tile--active {
+  background-color: #2A7F3E !important;
+  color: white !important;
+  font-weight: 600;
+}
+
+.booking-calendar .react-calendar__tile--now {
+  background-color: #C5A572;
+  color: white;
+  font-weight: 600;
+}
+
+.booking-calendar .react-calendar__tile--now:enabled:hover {
+  background-color: #b59562;
+}
+
+.booking-calendar .react-calendar__tile:disabled {
+  background-color: transparent;
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+.booking-calendar .react-calendar__month-view__days__day--weekend {
+  color: #999;
+}
+
+.booking-calendar .react-calendar__month-view__days__day--neighboringMonth {
+  color: #ccc;
+}
+
+.booking-calendar .react-calendar__year-view .react-calendar__tile,
+.booking-calendar .react-calendar__decade-view .react-calendar__tile,
+.booking-calendar .react-calendar__century-view .react-calendar__tile {
+  padding: 1.5rem 0.5rem;
+}
+
+/* Time Slot Scrollbar */
+.booking-calendar + div::-webkit-scrollbar {
+  width: 6px;
+}
+
+.booking-calendar + div::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.booking-calendar + div::-webkit-scrollbar-thumb {
+  background: #2A7F3E;
+  border-radius: 10px;
+}
+
+.booking-calendar + div::-webkit-scrollbar-thumb:hover {
+  background: #1a5f2e;
+}
