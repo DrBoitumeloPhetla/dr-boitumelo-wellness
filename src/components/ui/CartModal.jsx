@@ -359,7 +359,7 @@ const CartModal = () => {
                       >
                         {/* Product Image */}
                         <img
-                          src={item.image}
+                          src={item.image_url || item.image}
                           alt={item.name}
                           className="w-20 h-20 object-cover rounded-lg"
                         />

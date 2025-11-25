@@ -93,7 +93,20 @@ const Products = () => {
   };
 
   const handleAddToCart = (product) => {
-    addToCart(product);
+    // Calculate discount info
+    const priceInfo = calculateDiscountedPrice(product);
+
+    // Add product with discount information
+    const productWithDiscount = {
+      ...product,
+      ...(priceInfo && {
+        originalPrice: priceInfo.originalPrice,
+        price: priceInfo.discountedPrice,
+        discount: priceInfo.discount
+      })
+    };
+
+    addToCart(productWithDiscount);
     // Show visual feedback
     setAddedToCart((prev) => [...prev, product.id]);
     setTimeout(() => {
