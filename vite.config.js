@@ -20,7 +20,6 @@ export default defineConfig({
             './src/pages/Admin/AdminClients.jsx',
             './src/pages/Admin/AdminProducts.jsx',
             './src/pages/Admin/AdminOrders.jsx',
-            './src/pages/Admin/AdminAppointments.jsx',
             './src/pages/Admin/AdminContacts.jsx',
             './src/pages/Admin/AdminCalendar.jsx',
           ],
@@ -29,14 +28,8 @@ export default defineConfig({
     },
     // Increase chunk size warning limit
     chunkSizeWarningLimit: 1000,
-    // Minify for production
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // Remove console.logs in production
-        drop_debugger: true,
-      },
-    },
+    // Minify for production (using default esbuild minifier)
+    minify: 'esbuild',
   },
   // Optimize dependencies
   optimizeDeps: {
