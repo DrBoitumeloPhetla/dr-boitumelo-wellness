@@ -18,6 +18,8 @@ const Contact = lazy(() => import('./pages/Contact'));
 const Blog = lazy(() => import('./pages/Blog'));
 const BlogArticle = lazy(() => import('./pages/BlogArticle'));
 const Team = lazy(() => import('./pages/Team'));
+const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
+const PaymentCancel = lazy(() => import('./pages/PaymentCancel'));
 
 // Lazy load admin pages
 const AdminLogin = lazy(() => import('./pages/Admin/AdminLogin'));
@@ -137,6 +139,10 @@ function App() {
             <FloatingCartButton />
           </>
         } />
+
+        {/* Payment Routes */}
+        <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/payment/cancel" element={<PaymentCancel />} />
 
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />

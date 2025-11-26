@@ -5,6 +5,7 @@ import { useCart } from '../../context/CartContext';
 import { createOrder, saveAbandonedLead } from '../../lib/supabase';
 import { sendAbandonedCartToMake } from '../../lib/makeWebhooks';
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '../../lib/emailService';
+import { redirectToPayFast } from '../../lib/payfast';
 
 // Get wait time from environment variable (default to 30 minutes)
 const ABANDONED_WAIT_TIME = parseInt(import.meta.env.VITE_ABANDONED_WAIT_TIME) || 1800000;
@@ -147,14 +148,20 @@ const CartModal = () => {
     e.preventDefault();
 
     // Prepare order data
+    const order_id = 'ORD-' + Date.now();
     const orderData = {
-      id: 'ORD-' + Date.now(),
-      customer: checkoutData,
+      id: order_id,
+      customer_name: checkoutData.name,
+      customer_email: checkoutData.email,
+      customer_phone: checkoutData.phone,
+      customer_address: checkoutData.address,
+      customer_city: checkoutData.city,
+      customer_postal_code: checkoutData.postalCode,
+      notes: checkoutData.notes,
       items: cartItems,
       subtotal: getCartTotal(),
       shipping: getShippingTotal(),
       total: getGrandTotal(),
-      orderDate: new Date().toISOString(),
       status: 'pending'
     };
 
@@ -168,12 +175,16 @@ const CartModal = () => {
       const savedOrder = await createOrder(orderData);
       console.log('Order saved to Supabase successfully!');
 
-      // NOTE: Emails will be sent from admin dashboard after payment is confirmed
-      // Do not send emails here - customer hasn't paid yet
-      console.log('Order placed - awaiting payment confirmation');
+      // Redirect to PayFast for payment
+      console.log('Redirecting to PayFast for payment...');
+      redirectToPayFast({
+        order_id: order_id,
+        customer_name: checkoutData.name,
+        customer_email: checkoutData.email,
+        total: getGrandTotal(),
+        items: cartItems
+      });
 
-      // Show order confirmation
-      setOrderComplete(true);
     } catch (error) {
       console.error('Error saving order:', error);
       alert('There was an error processing your order. Please try again.');
