@@ -20,6 +20,7 @@ const BlogArticle = lazy(() => import('./pages/BlogArticle'));
 const Team = lazy(() => import('./pages/Team'));
 const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
 const PaymentCancel = lazy(() => import('./pages/PaymentCancel'));
+const BookingSuccess = lazy(() => import('./pages/BookingSuccess'));
 
 // Lazy load admin pages
 const AdminLogin = lazy(() => import('./pages/Admin/AdminLogin'));
@@ -143,6 +144,10 @@ function App() {
         {/* Payment Routes */}
         <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/payment/cancel" element={<PaymentCancel />} />
+
+        {/* Booking Routes */}
+        <Route path="/booking/success" element={<BookingSuccess />} />
+        <Route path="/booking/cancel" element={<PaymentCancel />} />
 
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />

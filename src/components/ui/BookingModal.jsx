@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaArrowLeft, FaArrowRight, FaVideo, FaPhone, FaCreditCard } from 'react-icons/fa';
+import { redirectToPayFast } from '../../lib/payfast';
 
 const BookingModal = ({ isOpen, onClose }) => {
-  const [step, setStep] = useState(1); // 1: Choose consultation type, 2: Payment, 3: Calendly booking
+  const [step, setStep] = useState(1); // 1: Choose consultation type, 2: Calendly booking, 3: Payment
   const [consultationType, setConsultationType] = useState(''); // 'virtual' or 'telephonic'
   const [consultationPrice, setConsultationPrice] = useState(0);
   const [calendlyKey, setCalendlyKey] = useState(0); // Key to force widget remount
+  const [calendlyEventData, setCalendlyEventData] = useState(null); // Store Calendly booking data
+  const [calendlyBooked, setCalendlyBooked] = useState(false);
+  const [processing, setProcessing] = useState(false);
 
-  // Load Calendly widget script and reinitialize widget when needed
+  // Load Calendly widget script and listen for booking events
   useEffect(() => {
-    if (isOpen && step === 3) {
+    if (isOpen && step === 2) {
       // Force widget to remount by updating key
       setCalendlyKey(prev => prev + 1);
 
@@ -26,7 +30,7 @@ const BookingModal = ({ isOpen, onClose }) => {
         script.onload = () => {
           if (window.Calendly) {
             window.Calendly.initInlineWidget({
-              url: 'https://calendly.com/drboitumelowellnesssupplements/30min?hide_gdpr_banner=1&background_color=f0fdf4&text_color=1f2937&primary_color=eab308',
+              url: `https://calendly.com/drboitumelowellnesssupplements/30min?hide_gdpr_banner=1&background_color=f0fdf4&text_color=1f2937&primary_color=eab308`,
               parentElement: document.querySelector('.calendly-inline-widget'),
             });
           }
@@ -34,28 +38,74 @@ const BookingModal = ({ isOpen, onClose }) => {
       } else {
         // Script already exists, just reinitialize the inline widget
         if (window.Calendly) {
-          // Small delay to ensure DOM is ready
           setTimeout(() => {
             const widgetElement = document.querySelector('.calendly-inline-widget');
             if (widgetElement) {
-              // Clear any existing widget content
               widgetElement.innerHTML = '';
-              // Reinitialize
               window.Calendly.initInlineWidget({
-                url: 'https://calendly.com/drboitumelowellnesssupplements/30min?hide_gdpr_banner=1&background_color=f0fdf4&text_color=1f2937&primary_color=eab308',
+                url: `https://calendly.com/drboitumelowellnesssupplements/30min?hide_gdpr_banner=1&background_color=f0fdf4&text_color=1f2937&primary_color=eab308`,
                 parentElement: widgetElement,
               });
             }
           }, 100);
         }
       }
+
+      // Listen for Calendly booking events
+      const handleCalendlyEvent = (e) => {
+        if (e.data.event === 'calendly.event_scheduled') {
+          console.log('Calendly event scheduled:', e.data);
+          setCalendlyEventData(e.data.payload);
+          setCalendlyBooked(true);
+          // Auto-advance to payment step after 2 seconds
+          setTimeout(() => {
+            setStep(3);
+          }, 2000);
+        }
+      };
+
+      window.addEventListener('message', handleCalendlyEvent);
+
+      return () => {
+        window.removeEventListener('message', handleCalendlyEvent);
+      };
     }
   }, [isOpen, step]);
+
+  const handlePayment = async () => {
+    setProcessing(true);
+    try {
+      // Generate booking ID
+      const booking_id = 'BOOK-' + Date.now();
+
+      // Extract user info from Calendly event data
+      const invitee = calendlyEventData?.invitee || {};
+      const customerName = invitee.name || 'Guest';
+      const customerEmail = invitee.email || '';
+
+      // Redirect to PayFast for payment
+      redirectToPayFast({
+        order_id: booking_id,
+        customer_name: customerName,
+        customer_email: customerEmail,
+        total: consultationPrice,
+        items: [{
+          name: `${consultationType === 'virtual' ? 'Virtual' : 'Telephonic'} Consultation`,
+          quantity: 1,
+          price: consultationPrice
+        }]
+      });
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      alert('Error processing payment. Please try again.');
+      setProcessing(false);
+    }
+  };
 
   const handleConsultationTypeSelect = (type) => {
     setConsultationType(type);
     setConsultationPrice(type === 'virtual' ? 1500 : 1000);
-    setStep(2);
+    setStep(2); // Go directly to Calendly widget
   };
 
   const handleClose = () => {
@@ -95,13 +145,13 @@ const BookingModal = ({ isOpen, onClose }) => {
             </button>
             <h2 className="text-xl font-bold text-center text-white">
               {step === 1 && 'Choose Consultation Type'}
-              {step === 2 && 'Payment'}
-              {step === 3 && 'Book Your Appointment'}
+              {step === 2 && 'Book Your Appointment'}
+              {step === 3 && 'Payment'}
             </h2>
             <p className="text-white mt-1 text-center text-xs">
               {step === 1 && 'Select the type of consultation you prefer'}
-              {step === 2 && `Complete payment for ${consultationType} consultation (R${consultationPrice})`}
-              {step === 3 && 'Choose your preferred appointment time'}
+              {step === 2 && 'Choose your preferred appointment time'}
+              {step === 3 && `Complete payment for ${consultationType} consultation (R${consultationPrice})`}
             </p>
           </div>
 
@@ -145,49 +195,81 @@ const BookingModal = ({ isOpen, onClose }) => {
               </div>
             )}
 
-            {/* STEP 2: Payment */}
+            {/* STEP 2: Calendly Booking */}
             {step === 2 && (
-              <div className="p-8 bg-white">
-                <div className="max-w-md mx-auto">
-                  <div className="bg-green-50 p-6 rounded-xl border-2 border-green-200 mb-6">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-gray-700 font-semibold">{consultationType === 'virtual' ? 'Virtual' : 'Telephonic'} Consultation</span>
-                      <span className="text-2xl font-bold text-green-600">R{consultationPrice}</span>
-                    </div>
-                    <p className="text-gray-600 text-sm">30-minute consultation with Dr. Boitumelo Phetla</p>
-                  </div>
-
-                  <div className="bg-yellow-100 p-6 rounded-xl border-2 border-yellow-300 text-center">
-                    <FaCreditCard className="text-5xl text-yellow-600 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Payment Gateway</h3>
-                    <p className="text-gray-600 text-sm mb-6">Payment integration coming soon</p>
-
-                    {/* Temporary button to skip payment for testing */}
-                    <button
-                      onClick={() => setStep(3)}
-                      className="w-full px-8 py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-xl font-semibold hover:shadow-xl hover:from-yellow-600 hover:to-yellow-700 transition-all flex items-center justify-center space-x-2"
-                    >
-                      <span>Continue (Payment Placeholder)</span>
-                      <FaArrowRight />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 3: Calendly Booking */}
-            {step === 3 && (
               <div className="h-full" key={`calendly-${calendlyKey}`}>
-                <div className="px-4 pt-3 pb-2 bg-green-50 border-b border-green-200">
-                  <p className="text-green-800 text-sm">
-                    <strong>✓ Payment confirmed!</strong> Now select your preferred appointment time.
-                  </p>
-                </div>
+                {calendlyBooked && (
+                  <div className="px-4 pt-3 pb-2 bg-green-50 border-b border-green-200">
+                    <p className="text-green-800 text-sm">
+                      <strong>✓ Appointment booked!</strong> Redirecting to payment...
+                    </p>
+                  </div>
+                )}
                 <div
                   className="calendly-inline-widget"
                   data-url="https://calendly.com/drboitumelowellnesssupplements/30min?hide_gdpr_banner=1&background_color=f0fdf4&text_color=1f2937&primary_color=eab308"
                   style={{ minWidth: '320px', height: '600px' }}
                 />
+              </div>
+            )}
+
+            {/* STEP 3: Payment */}
+            {step === 3 && (
+              <div className="p-8 bg-white">
+                <div className="max-w-md mx-auto">
+                  <div className="bg-green-50 p-6 rounded-xl border-2 border-green-200 mb-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="text-gray-700 font-semibold">{consultationType === 'virtual' ? 'Virtual' : 'Telephonic'} Consultation</span>
+                      <span className="text-2xl font-bold text-green-600">R{consultationPrice}</span>
+                    </div>
+                    <div className="border-t border-green-300 pt-3 space-y-1 text-sm">
+                      {calendlyEventData?.invitee && (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Name:</span>
+                            <span className="font-semibold">{calendlyEventData.invitee.name}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Email:</span>
+                            <span className="font-semibold">{calendlyEventData.invitee.email}</span>
+                          </div>
+                        </>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Appointment:</span>
+                        <span className="font-semibold text-green-600">✓ Scheduled</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-yellow-100 p-6 rounded-xl border-2 border-yellow-300 text-center">
+                    <FaCreditCard className="text-5xl text-yellow-600 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">Secure Payment</h3>
+                    <p className="text-gray-600 text-sm mb-6">Complete your payment to confirm your consultation booking</p>
+
+                    <button
+                      onClick={handlePayment}
+                      disabled={processing}
+                      className="w-full px-8 py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-xl font-semibold hover:shadow-xl hover:from-yellow-600 hover:to-yellow-700 transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {processing ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Proceed to Payment</span>
+                          <FaArrowRight />
+                        </>
+                      )}
+                    </button>
+
+                    <p className="text-xs text-gray-500 mt-4">
+                      Your appointment is reserved. Payment is required to confirm.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
           </div>

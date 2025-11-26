@@ -64,13 +64,58 @@ export const sendAdminOrderNotification = async (orderData) => {
   return { success: true, message: 'Admin notification sent' };
 };
 
-// Appointment emails (not used for orders, but keeping for future)
+/**
+ * Send booking confirmation emails (both customer and admin)
+ * Make.com will handle sending both emails from supplements@drphetla.co.za
+ */
+export const sendBookingConfirmationEmail = async (bookingData) => {
+  try {
+    const { customer_name, customer_email, customer_phone, consultation_type, booking_id, total } = bookingData;
+
+    const emailData = {
+      type: 'new_booking',
+      customerName: customer_name,
+      customerEmail: customer_email,
+      customerPhone: customer_phone,
+      bookingId: booking_id,
+      consultationType: consultation_type,
+      amount: total.toFixed(2),
+      calendlyLink: 'https://calendly.com/drboitumelowellnesssupplements/30min',
+      timestamp: new Date().toISOString()
+    };
+
+    console.log('📧 Sending booking confirmation emails via Make.com:', emailData);
+
+    if (MAKE_ORDER_WEBHOOK) {
+      const response = await fetch(MAKE_ORDER_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(emailData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Make.com webhook failed: ${response.statusText}`);
+      }
+
+      console.log('✅ Booking confirmation emails sent successfully');
+      return { success: true, message: 'Booking emails sent' };
+    } else {
+      console.warn('⚠️ Make.com order webhook not configured');
+      return { success: false, error: 'Webhook URL not configured' };
+    }
+  } catch (error) {
+    console.error('Error sending booking emails:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Deprecated appointment email functions (keeping for backwards compatibility)
 export const sendAppointmentConfirmationEmail = async (appointmentData) => {
-  console.log('📧 Appointment confirmation - not yet implemented');
-  return { success: true, message: 'Appointment email not configured' };
+  console.log('📧 Deprecated: Use sendBookingConfirmationEmail instead');
+  return { success: true, message: 'Use sendBookingConfirmationEmail instead' };
 };
 
 export const sendAdminAppointmentNotification = async (appointmentData) => {
-  console.log('📧 Admin appointment notification - not yet implemented');
-  return { success: true, message: 'Appointment notification not configured' };
+  console.log('📧 Deprecated: Use sendBookingConfirmationEmail instead');
+  return { success: true, message: 'Use sendBookingConfirmationEmail instead' };
 };

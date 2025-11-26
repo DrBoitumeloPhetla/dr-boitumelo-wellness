@@ -22,6 +22,11 @@ export const generatePayFastData = (orderData) => {
   // Get current site URL
   const siteUrl = window.location.origin;
 
+  // Determine if this is a booking or order
+  const isBooking = order_id.startsWith('BOOK-');
+  const successPath = isBooking ? '/booking/success' : '/payment/success';
+  const cancelPath = isBooking ? '/booking/cancel' : '/payment/cancel';
+
   // PayFast payment data
   const paymentData = {
     // Merchant details
@@ -36,12 +41,14 @@ export const generatePayFastData = (orderData) => {
     // Transaction details
     m_payment_id: order_id,
     amount: total.toFixed(2),
-    item_name: `Order ${order_id}`,
-    item_description: `${items.length} item(s) from Dr. Boitumelo Wellness`,
+    item_name: isBooking ? `Booking ${order_id}` : `Order ${order_id}`,
+    item_description: isBooking ?
+      `Consultation booking from Dr. Boitumelo Wellness` :
+      `${items.length} item(s) from Dr. Boitumelo Wellness`,
 
     // Return URLs (include order_id in success URL for immediate access)
-    return_url: `${siteUrl}/payment/success?order_id=${order_id}`,
-    cancel_url: `${siteUrl}/payment/cancel?order_id=${order_id}`,
+    return_url: `${siteUrl}${successPath}?order_id=${order_id}`,
+    cancel_url: `${siteUrl}${cancelPath}?order_id=${order_id}`,
     notify_url: `${siteUrl}/api/payfast/notify`,
 
     // Custom fields

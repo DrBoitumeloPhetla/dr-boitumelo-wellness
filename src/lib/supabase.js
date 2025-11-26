@@ -245,50 +245,62 @@ export const createAppointment = async (appointmentData) => {
     notes: appointmentData.additionalNotes
   }, 'appointment');
 
-  // Create event in Google Calendar via backend API
+  // Only create Google Calendar event if date and time are provided
+  // For Calendly bookings (date/time are null), skip Google Calendar creation
   let googleEventId = null;
-  try {
-    const calendarEvent = await createCalendarEvent({
-      date: appointmentData.date,
-      time: appointmentData.time,
-      duration: 30, // Default 30 minutes
-      clientName: appointmentData.name,
-      clientEmail: appointmentData.email,
-      serviceType: appointmentData.type || 'Consultation',
-      notes: appointmentData.additionalNotes
-    });
-    googleEventId = calendarEvent.id;
-    console.log('✅ Created Google Calendar event:', googleEventId);
-  } catch (calError) {
-    console.error('⚠️ Failed to create Google Calendar event:', calError);
-    // Continue with appointment creation even if calendar fails
+  if (appointmentData.date && appointmentData.time) {
+    try {
+      const calendarEvent = await createCalendarEvent({
+        date: appointmentData.date,
+        time: appointmentData.time,
+        duration: 30, // Default 30 minutes
+        clientName: appointmentData.name,
+        clientEmail: appointmentData.email,
+        serviceType: appointmentData.type || 'Consultation',
+        notes: appointmentData.additionalNotes
+      });
+      googleEventId = calendarEvent.id;
+      console.log('✅ Created Google Calendar event:', googleEventId);
+    } catch (calError) {
+      console.error('⚠️ Failed to create Google Calendar event:', calError);
+      // Continue with appointment creation even if calendar fails
+    }
+  } else {
+    console.log('ℹ️ Skipping Google Calendar creation - using Calendly for scheduling');
   }
 
   // Then create the appointment in Supabase
+  // For Calendly bookings, we only have basic info - date/time will be managed by Calendly
+  const insertData = {
+    appointment_id: appointmentData.id,
+    type: appointmentData.type,
+    name: appointmentData.name,
+    email: appointmentData.email,
+    phone: appointmentData.phone,
+    status: appointmentData.status || 'pending',
+    booked_at: appointmentData.bookedAt || new Date().toISOString(),
+    // Set null for date/time fields explicitly (Calendly handles scheduling)
+    appointment_date: appointmentData.date || null,
+    appointment_time: appointmentData.time || null,
+    symptoms: appointmentData.symptoms || null,
+    symptoms_start_date: appointmentData.symptomsStartDate || null,
+    vitamin_d_test: appointmentData.vitaminDTest || null,
+    additional_notes: appointmentData.additionalNotes || null,
+    google_event_id: googleEventId || null
+  };
+
   const { data, error } = await supabase
     .from('appointments')
-    .insert([{
-      appointment_id: appointmentData.id,
-      type: appointmentData.type,
-      appointment_date: appointmentData.date,
-      appointment_time: appointmentData.time,
-      name: appointmentData.name,
-      email: appointmentData.email,
-      phone: appointmentData.phone,
-      symptoms: appointmentData.symptoms,
-      symptoms_start_date: appointmentData.symptomsStartDate,
-      vitamin_d_test: appointmentData.vitaminDTest,
-      additional_notes: appointmentData.additionalNotes,
-      status: appointmentData.status,
-      booked_at: appointmentData.bookedAt,
-      google_event_id: googleEventId // Store Google Calendar event ID
-    }])
+    .insert([insertData])
     .select();
 
   if (error) {
-    console.error('Error creating appointment:', error);
+    console.error('Error creating appointment in Supabase:', error);
+    console.error('Data attempted to insert:', insertData);
     throw error;
   }
+
+  console.log('✅ Appointment created successfully:', data[0]);
   return data[0];
 };
 
@@ -357,7 +369,20 @@ export const updateAppointmentStatus = async (appointmentId, status) => {
     console.error('Error updating appointment status:', error);
     throw error;
   }
-  return data[0];
+
+  const appointment = data[0];
+
+  // Return formatted data for booking success page
+  return {
+    id: appointment.appointment_id,
+    customer_name: appointment.name,
+    customer_email: appointment.email,
+    customer_phone: appointment.phone,
+    consultation_type: appointment.type,
+    total: appointment.type === 'virtual' ? 1500 : 1000,
+    status: appointment.status,
+    booked_at: appointment.booked_at
+  };
 };
 
 // ============================================
