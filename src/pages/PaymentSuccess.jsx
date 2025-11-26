@@ -14,7 +14,12 @@ const PaymentSuccess = () => {
   const [orderDetails, setOrderDetails] = useState(null);
 
   useEffect(() => {
+    let processed = false; // Flag to prevent multiple executions
+
     const processPayment = async () => {
+      if (processed) return; // Prevent duplicate processing
+      processed = true;
+
       // Get order ID from URL parameters
       const orderId = searchParams.get('m_payment_id') || searchParams.get('order_id');
 
@@ -24,12 +29,27 @@ const PaymentSuccess = () => {
         return;
       }
 
+      // Check if already processed (stored in sessionStorage)
+      const processedKey = `order_processed_${orderId}`;
+      if (sessionStorage.getItem(processedKey)) {
+        console.log('Order already processed, skipping...');
+        setProcessing(false);
+        // Still fetch order details to display
+        try {
+          const order = await updateOrderStatus(orderId, 'processing');
+          setOrderDetails(order);
+        } catch (error) {
+          console.error('Error fetching order:', error);
+        }
+        return;
+      }
+
       try {
         // Update order status to 'processing'
         const updatedOrder = await updateOrderStatus(orderId, 'processing');
         setOrderDetails(updatedOrder);
 
-        // Send confirmation emails
+        // Send confirmation emails ONLY ONCE
         await sendOrderConfirmationEmail({
           customer_name: updatedOrder.customer_name,
           customer_email: updatedOrder.customer_email,
@@ -40,6 +60,9 @@ const PaymentSuccess = () => {
           total: updatedOrder.total,
           order_id: updatedOrder.id
         });
+
+        // Mark as processed in sessionStorage
+        sessionStorage.setItem(processedKey, 'true');
 
         // Clear cart
         clearCart();
