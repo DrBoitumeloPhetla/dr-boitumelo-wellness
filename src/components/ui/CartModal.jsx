@@ -164,7 +164,8 @@ const CartModal = () => {
       subtotal: getCartTotal(),
       shipping: getShippingTotal(),
       total: getGrandTotal(),
-      status: 'pending'
+      status: 'pending',
+      orderDate: new Date().toISOString()
     };
 
     try {
