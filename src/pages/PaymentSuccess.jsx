@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaCheckCircle, FaHome, FaShoppingBag } from 'react-icons/fa';
@@ -12,14 +12,16 @@ const PaymentSuccess = () => {
   const { clearCart } = useCart();
   const [processing, setProcessing] = useState(true);
   const [orderDetails, setOrderDetails] = useState(null);
+  const hasProcessedRef = useRef(false); // Persistent ref to prevent duplicate processing
 
   useEffect(() => {
-    let processed = false; // Flag to prevent multiple executions
+    // Prevent double execution from React Strict Mode or re-renders
+    if (hasProcessedRef.current) {
+      console.log('Already processed in this component instance, skipping...');
+      return;
+    }
 
     const processPayment = async () => {
-      if (processed) return; // Prevent duplicate processing
-      processed = true;
-
       // Get order ID from URL parameters
       const orderId = searchParams.get('m_payment_id') || searchParams.get('order_id');
 
@@ -32,7 +34,7 @@ const PaymentSuccess = () => {
       // Check if already processed (stored in sessionStorage)
       const processedKey = `order_processed_${orderId}`;
       if (sessionStorage.getItem(processedKey)) {
-        console.log('Order already processed, skipping...');
+        console.log('Order already processed in session, skipping...');
         setProcessing(false);
         // Still fetch order details to display
         try {
@@ -43,6 +45,9 @@ const PaymentSuccess = () => {
         }
         return;
       }
+
+      // Mark as processing immediately
+      hasProcessedRef.current = true;
 
       try {
         // Update order status to 'processing'
