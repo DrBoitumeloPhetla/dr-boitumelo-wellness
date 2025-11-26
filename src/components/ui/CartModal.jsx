@@ -151,13 +151,15 @@ const CartModal = () => {
     const order_id = 'ORD-' + Date.now();
     const orderData = {
       id: order_id,
-      customer_name: checkoutData.name,
-      customer_email: checkoutData.email,
-      customer_phone: checkoutData.phone,
-      customer_address: checkoutData.address,
-      customer_city: checkoutData.city,
-      customer_postal_code: checkoutData.postalCode,
-      notes: checkoutData.notes,
+      customer: {
+        name: checkoutData.name,
+        email: checkoutData.email,
+        phone: checkoutData.phone,
+        address: checkoutData.address,
+        city: checkoutData.city,
+        postalCode: checkoutData.postalCode,
+        notes: checkoutData.notes
+      },
       items: cartItems,
       subtotal: getCartTotal(),
       shipping: getShippingTotal(),
@@ -179,8 +181,8 @@ const CartModal = () => {
       console.log('Redirecting to PayFast for payment...');
       redirectToPayFast({
         order_id: order_id,
-        customer_name: checkoutData.name,
-        customer_email: checkoutData.email,
+        customer_name: orderData.customer.name,
+        customer_email: orderData.customer.email,
         total: getGrandTotal(),
         items: cartItems
       });
