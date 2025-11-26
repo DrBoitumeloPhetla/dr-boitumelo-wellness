@@ -212,7 +212,25 @@ export const updateOrderStatus = async (orderId, status) => {
     console.error('Error updating order status:', error);
     throw error;
   }
-  return data[0];
+
+  // Transform to match frontend format
+  const order = data[0];
+  return {
+    id: order.order_id,
+    customer_name: order.customer_name,
+    customer_email: order.customer_email,
+    customer_phone: order.customer_phone,
+    customer_address: order.customer_address,
+    customer_city: order.customer_city,
+    customer_postal_code: order.customer_postal_code,
+    customer_notes: order.customer_notes,
+    items: order.items,
+    subtotal: parseFloat(order.total),
+    shipping: 0,
+    total: parseFloat(order.total),
+    status: order.status,
+    order_date: order.order_date
+  };
 };
 
 // ============================================
