@@ -39,9 +39,9 @@ export const generatePayFastData = (orderData) => {
     item_name: `Order ${order_id}`,
     item_description: `${items.length} item(s) from Dr. Boitumelo Wellness`,
 
-    // Return URLs
-    return_url: `${siteUrl}/payment/success`,
-    cancel_url: `${siteUrl}/payment/cancel`,
+    // Return URLs (include order_id in success URL for immediate access)
+    return_url: `${siteUrl}/payment/success?order_id=${order_id}`,
+    cancel_url: `${siteUrl}/payment/cancel?order_id=${order_id}`,
     notify_url: `${siteUrl}/api/payfast/notify`,
 
     // Custom fields
