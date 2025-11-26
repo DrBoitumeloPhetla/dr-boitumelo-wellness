@@ -133,10 +133,8 @@ const CartModal = () => {
 
   // Calculate total shipping cost for all items in cart
   const getShippingTotal = () => {
-    return cartItems.reduce((total, item) => {
-      const shippingCost = item.shipping_cost || 0;
-      return total + (parseFloat(shippingCost) * item.quantity);
-    }, 0);
+    // Flat shipping rate of R168 for all orders
+    return cartItems.length > 0 ? 168 : 0;
   };
 
   // Calculate grand total (cart total + shipping)
