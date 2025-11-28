@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { FaCheckCircle, FaHeart, FaLeaf, FaUserMd } from 'react-icons/fa';
+import MediaSection from '../components/sections/MediaSection';
 
 const About = () => {
   const [ref, inView] = useInView({
@@ -187,6 +188,9 @@ const About = () => {
           </div>
         </div>
       </section>
+
+      {/* Media Section */}
+      <MediaSection showAllVideos={true} />
     </div>
   );
 };
