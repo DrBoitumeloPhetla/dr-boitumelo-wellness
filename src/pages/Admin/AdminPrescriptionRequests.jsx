@@ -40,23 +40,36 @@ const AdminPrescriptionRequests = () => {
       await approvePrescriptionRequest(request.id, 'Dr. Boitumelo Phetla');
 
       // Send approval email with purchase link via Make.com
-      const webhookUrl = import.meta.env.VITE_MAKE_ORDER_WEBHOOK;
+      const webhookUrl = import.meta.env.VITE_MAKE_PRESCRIPTION_WEBHOOK || 'https://hook.eu2.make.com/v2qde71mrmnfm17fgvkp5dwivlg5oyyy';
       const purchaseLink = `${window.location.origin}/prescription-purchase/${request.unique_code}`;
+      const expiryDate = new Date(request.expires_at).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
 
       if (webhookUrl) {
-        await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'prescription_approved',
-            customerName: request.customer_name,
-            customerEmail: request.customer_email,
-            productName: request.products?.name,
-            purchaseLink: purchaseLink,
-            expiresAt: request.expires_at,
-            timestamp: new Date().toISOString()
-          })
-        });
+        try {
+          await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'prescription_approved',
+              customerName: request.customer_name,
+              customerEmail: request.customer_email,
+              productName: request.products?.name,
+              productPrice: request.products?.price,
+              uniqueCode: request.unique_code,
+              purchaseLink: purchaseLink,
+              expiryDate: expiryDate,
+              dosageInstructions: 'Take as directed by Dr. Boitumelo. Do not exceed recommended dosage.',
+              timestamp: new Date().toISOString()
+            })
+          });
+          console.log('✅ Prescription approval webhook triggered successfully');
+        } catch (webhookError) {
+          console.error('Warning: Failed to trigger approval webhook:', webhookError);
+        }
       }
 
       alert('Prescription request approved! Customer will receive an email with purchase link.');
@@ -77,20 +90,26 @@ const AdminPrescriptionRequests = () => {
       await denyPrescriptionRequest(selectedRequest.id, denialReason);
 
       // Send denial email via Make.com
-      const webhookUrl = import.meta.env.VITE_MAKE_ORDER_WEBHOOK;
+      const webhookUrl = import.meta.env.VITE_MAKE_PRESCRIPTION_WEBHOOK || 'https://hook.eu2.make.com/v2qde71mrmnfm17fgvkp5dwivlg5oyyy';
       if (webhookUrl) {
-        await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'prescription_denied',
-            customerName: selectedRequest.customer_name,
-            customerEmail: selectedRequest.customer_email,
-            productName: selectedRequest.products?.name,
-            denialReason: denialReason,
-            timestamp: new Date().toISOString()
-          })
-        });
+        try {
+          await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'prescription_denied',
+              customerName: selectedRequest.customer_name,
+              customerEmail: selectedRequest.customer_email,
+              productName: selectedRequest.products?.name,
+              doctorNotes: denialReason,
+              denialReason: denialReason, // Keeping both for backward compatibility
+              timestamp: new Date().toISOString()
+            })
+          });
+          console.log('✅ Prescription denial webhook triggered successfully');
+        } catch (webhookError) {
+          console.error('Warning: Failed to trigger denial webhook:', webhookError);
+        }
       }
 
       alert('Prescription request denied. Customer will receive an email.');
