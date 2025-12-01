@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { FaCheck, FaTimes, FaPrescriptionBottle, FaEnvelope, FaPhone, FaCalendar, FaCopy, FaFilePdf, FaFileImage, FaExternalLinkAlt, FaTrash } from 'react-icons/fa';
 import AdminLayout from '../../components/Admin/AdminLayout';
@@ -16,6 +16,10 @@ const AdminPrescriptionRequests = () => {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [denialReason, setDenialReason] = useState('');
   const [showDenialModal, setShowDenialModal] = useState(false);
+  const [processingRequest, setProcessingRequest] = useState(null);
+
+  // Track which requests have already had webhooks sent to prevent duplicates
+  const webhooksSentRef = useRef(new Set());
 
   useEffect(() => {
     loadRequests();
@@ -36,7 +40,22 @@ const AdminPrescriptionRequests = () => {
   const handleApprove = async (request) => {
     if (!confirm(`Approve prescription request for ${request.customer_name}?`)) return;
 
+    // Prevent duplicate webhook triggers
+    const webhookKey = `approve-${request.id}`;
+    if (webhooksSentRef.current.has(webhookKey)) {
+      console.log('⚠️ Webhook already sent for this approval, skipping duplicate');
+      return;
+    }
+
+    // Mark as processing
+    if (processingRequest === request.id) {
+      console.log('⚠️ Already processing this request, skipping duplicate');
+      return;
+    }
+
     try {
+      setProcessingRequest(request.id);
+
       await approvePrescriptionRequest(request.id, 'Dr. Boitumelo Phetla');
 
       // Send approval email with purchase link via Make.com
@@ -50,6 +69,9 @@ const AdminPrescriptionRequests = () => {
 
       if (webhookUrl) {
         try {
+          // Mark webhook as sent BEFORE making the request
+          webhooksSentRef.current.add(webhookKey);
+
           await fetch(webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -69,6 +91,8 @@ const AdminPrescriptionRequests = () => {
           console.log('✅ Prescription approval webhook triggered successfully');
         } catch (webhookError) {
           console.error('Warning: Failed to trigger approval webhook:', webhookError);
+          // Remove from sent set if webhook failed, so it can be retried
+          webhooksSentRef.current.delete(webhookKey);
         }
       }
 
@@ -77,6 +101,10 @@ const AdminPrescriptionRequests = () => {
     } catch (error) {
       console.error('Error approving request:', error);
       alert('Failed to approve request');
+      // Remove from sent set if approval failed
+      webhooksSentRef.current.delete(webhookKey);
+    } finally {
+      setProcessingRequest(null);
     }
   };
 
@@ -86,13 +114,31 @@ const AdminPrescriptionRequests = () => {
       return;
     }
 
+    // Prevent duplicate webhook triggers
+    const webhookKey = `deny-${selectedRequest.id}`;
+    if (webhooksSentRef.current.has(webhookKey)) {
+      console.log('⚠️ Webhook already sent for this denial, skipping duplicate');
+      return;
+    }
+
+    // Mark as processing
+    if (processingRequest === selectedRequest.id) {
+      console.log('⚠️ Already processing this request, skipping duplicate');
+      return;
+    }
+
     try {
+      setProcessingRequest(selectedRequest.id);
+
       await denyPrescriptionRequest(selectedRequest.id, denialReason);
 
       // Send denial email via Make.com
       const webhookUrl = import.meta.env.VITE_MAKE_PRESCRIPTION_WEBHOOK || 'https://hook.eu2.make.com/v2qde71mrmnfm17fgvkp5dwivlg5oyyy';
       if (webhookUrl) {
         try {
+          // Mark webhook as sent BEFORE making the request
+          webhooksSentRef.current.add(webhookKey);
+
           await fetch(webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -109,6 +155,8 @@ const AdminPrescriptionRequests = () => {
           console.log('✅ Prescription denial webhook triggered successfully');
         } catch (webhookError) {
           console.error('Warning: Failed to trigger denial webhook:', webhookError);
+          // Remove from sent set if webhook failed, so it can be retried
+          webhooksSentRef.current.delete(webhookKey);
         }
       }
 
@@ -120,6 +168,10 @@ const AdminPrescriptionRequests = () => {
     } catch (error) {
       console.error('Error denying request:', error);
       alert('Failed to deny request');
+      // Remove from sent set if denial failed
+      webhooksSentRef.current.delete(webhookKey);
+    } finally {
+      setProcessingRequest(null);
     }
   };
 
@@ -314,17 +366,19 @@ const AdminPrescriptionRequests = () => {
                             <div className="flex space-x-2">
                               <button
                                 onClick={() => handleApprove(request)}
-                                className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 flex items-center space-x-1 text-sm"
+                                disabled={processingRequest === request.id}
+                                className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 flex items-center space-x-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 <FaCheck />
-                                <span>Approve</span>
+                                <span>{processingRequest === request.id ? 'Processing...' : 'Approve'}</span>
                               </button>
                               <button
                                 onClick={() => {
                                   setSelectedRequest(request);
                                   setShowDenialModal(true);
                                 }}
-                                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 flex items-center space-x-1 text-sm"
+                                disabled={processingRequest === request.id}
+                                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 flex items-center space-x-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 <FaTimes />
                                 <span>Deny</span>
@@ -332,7 +386,8 @@ const AdminPrescriptionRequests = () => {
                             </div>
                             <button
                               onClick={() => handleDelete(request)}
-                              className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center space-x-1 text-xs"
+                              disabled={processingRequest === request.id}
+                              className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center space-x-1 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <FaTrash />
                               <span>Delete</span>
@@ -414,15 +469,17 @@ const AdminPrescriptionRequests = () => {
                   setDenialReason('');
                   setSelectedRequest(null);
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                disabled={processingRequest === selectedRequest?.id}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeny}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                disabled={processingRequest === selectedRequest?.id}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Deny Request
+                {processingRequest === selectedRequest?.id ? 'Processing...' : 'Deny Request'}
               </button>
             </div>
           </motion.div>
