@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     try {
-      // Verify admin credentials first
+      // Verify admin credentials from database
       const result = await verifyAdminLogin(username, password);
 
       if (result.success && result.user) {
@@ -100,53 +100,9 @@ export const AuthProvider = ({ children }) => {
         return { success: true };
       }
 
-      // If Supabase fails, fallback to hardcoded credentials (development mode)
-      if (username === 'admin' && password === 'admin123') {
-        // Try to sign in with demo credentials
-        const demoEmail = 'admin@drboitumelowellness.co.za';
-        const { error: authError } = await supabase.auth.signInWithPassword({
-          email: demoEmail,
-          password: password
-        });
-
-        if (authError) {
-          console.warn('Demo Supabase auth failed:', authError.message);
-        }
-
-        const demoSession = {
-          adminId: 'demo-admin',
-          username: 'admin',
-          email: demoEmail,
-          fullName: 'Admin User',
-          role: 'admin',
-          loginTime: new Date().toISOString()
-        };
-        localStorage.setItem('adminSession', JSON.stringify(demoSession));
-        setAdminData(demoSession);
-        setIsAuthenticated(true);
-        return { success: true };
-      }
-
       return { success: false, error: 'Invalid credentials' };
     } catch (error) {
       console.error('Login error:', error);
-
-      // Fallback to hardcoded credentials if there's an error
-      if (username === 'admin' && password === 'admin123') {
-        const demoSession = {
-          adminId: 'demo-admin',
-          username: 'admin',
-          email: 'admin@drboitumelowellness.co.za',
-          fullName: 'Admin User',
-          role: 'admin',
-          loginTime: new Date().toISOString()
-        };
-        localStorage.setItem('adminSession', JSON.stringify(demoSession));
-        setAdminData(demoSession);
-        setIsAuthenticated(true);
-        return { success: true };
-      }
-
       return { success: false, error: error.message || 'Login failed. Please try again.' };
     }
   };
