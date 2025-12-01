@@ -457,6 +457,19 @@ export const updateContactStatus = async (contactId, status) => {
   return data[0];
 };
 
+export const deleteContact = async (contactId) => {
+  const { error } = await supabase
+    .from('contacts')
+    .delete()
+    .eq('contact_id', contactId);
+
+  if (error) {
+    console.error('Error deleting contact:', error);
+    throw error;
+  }
+  return true;
+};
+
 // ============================================
 // CALENDAR SETTINGS
 // ============================================
@@ -1521,6 +1534,34 @@ export const uploadReviewMedia = async (file) => {
   }
 };
 
+/**
+ * Create review with media (admin only - auto-approved)
+ */
+export const createReviewWithMedia = async (reviewData) => {
+  try {
+    const { data, error } = await supabase
+      .from('reviews')
+      .insert([{
+        ...reviewData,
+        status: 'approved', // Admin-created reviews are auto-approved
+        reviewed_by: 'Admin',
+        reviewed_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating review with media:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in createReviewWithMedia:', error);
+    throw error;
+  }
+};
+
 // ==================== BLOG ARTICLES ====================
 
 /**
@@ -1916,5 +1957,237 @@ export const getProductDiscount = async (productId) => {
   } catch (error) {
     console.error('Error in getProductDiscount:', error);
     return null;
+  }
+};
+
+// ============================================
+// PRESCRIPTION REQUEST FUNCTIONS
+// ============================================
+
+/**
+ * Create a new prescription request
+ */
+export const createPrescriptionRequest = async (requestData) => {
+  try {
+    const { data, error } = await supabase
+      .from('prescription_requests')
+      .insert([{
+        product_id: requestData.productId,
+        customer_name: requestData.customerName,
+        customer_email: requestData.customerEmail,
+        customer_phone: requestData.customerPhone,
+        health_info: requestData.healthInfo,
+        blood_test_file_url: requestData.bloodTestFileUrl,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating prescription request:', error);
+      throw error;
+    }
+
+    console.log('✅ Prescription request created:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in createPrescriptionRequest:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get all prescription requests (for admin)
+ */
+export const getAllPrescriptionRequests = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('prescription_requests')
+      .select(`
+        *,
+        products (
+          name,
+          price,
+          image_url
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching prescription requests:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in getAllPrescriptionRequests:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get prescription request by unique code
+ */
+export const getPrescriptionRequestByCode = async (uniqueCode) => {
+  try {
+    const { data, error } = await supabase
+      .from('prescription_requests')
+      .select(`
+        *,
+        products (
+          id,
+          name,
+          price,
+          description,
+          image_url,
+          category
+        )
+      `)
+      .eq('unique_code', uniqueCode)
+      .single();
+
+    if (error) {
+      console.error('Error fetching prescription request:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in getPrescriptionRequestByCode:', error);
+    return null;
+  }
+};
+
+/**
+ * Approve a prescription request
+ */
+export const approvePrescriptionRequest = async (requestId, approvedBy) => {
+  try {
+    const { data, error } = await supabase
+      .from('prescription_requests')
+      .update({
+        status: 'approved',
+        approved_by: approvedBy,
+        approved_at: new Date().toISOString()
+      })
+      .eq('id', requestId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error approving prescription request:', error);
+      throw error;
+    }
+
+    console.log('✅ Prescription request approved:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in approvePrescriptionRequest:', error);
+    throw error;
+  }
+};
+
+/**
+ * Deny a prescription request
+ */
+export const denyPrescriptionRequest = async (requestId, denialReason) => {
+  try {
+    const { data, error } = await supabase
+      .from('prescription_requests')
+      .update({
+        status: 'denied',
+        denial_reason: denialReason
+      })
+      .eq('id', requestId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error denying prescription request:', error);
+      throw error;
+    }
+
+    console.log('✅ Prescription request denied:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in denyPrescriptionRequest:', error);
+    throw error;
+  }
+};
+
+/**
+ * Mark first visit to prescription purchase link (starts 24hr countdown)
+ */
+export const markPrescriptionFirstVisit = async (uniqueCode) => {
+  try {
+    // Only update if first_visited_at is null
+    const { data, error } = await supabase
+      .from('prescription_requests')
+      .update({
+        first_visited_at: new Date().toISOString()
+      })
+      .eq('unique_code', uniqueCode)
+      .is('first_visited_at', null)
+      .select()
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116 = no rows returned (already visited)
+      console.error('Error marking first visit:', error);
+      throw error;
+    }
+
+    console.log('✅ First visit marked (24hr window started)');
+    return data;
+  } catch (error) {
+    console.error('Error in markPrescriptionFirstVisit:', error);
+    // Don't throw - this shouldn't block the page load
+  }
+};
+
+/**
+ * Mark prescription request as used (after purchase)
+ */
+export const markPrescriptionRequestUsed = async (uniqueCode) => {
+  try {
+    const { data, error } = await supabase
+      .from('prescription_requests')
+      .update({
+        used_at: new Date().toISOString()
+      })
+      .eq('unique_code', uniqueCode)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error marking prescription request as used:', error);
+      throw error;
+    }
+
+    console.log('✅ Prescription request marked as used:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in markPrescriptionRequestUsed:', error);
+    throw error;
+  }
+};
+
+export const deletePrescriptionRequest = async (requestId) => {
+  try {
+    const { error } = await supabase
+      .from('prescription_requests')
+      .delete()
+      .eq('id', requestId);
+
+    if (error) {
+      console.error('Error deleting prescription request:', error);
+      throw error;
+    }
+
+    console.log('✅ Prescription request deleted successfully');
+    return true;
+  } catch (error) {
+    console.error('Error in deletePrescriptionRequest:', error);
+    throw error;
   }
 };

@@ -17,6 +17,7 @@ const Testimonials = () => {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
 
   // Hardcoded testimonials as fallback
   const fallbackTestimonials = [
@@ -115,6 +116,17 @@ const Testimonials = () => {
     setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
   };
 
+  // Auto-rotate testimonials every 6 seconds
+  useEffect(() => {
+    if (testimonials.length <= 1 || isPaused) return;
+
+    const interval = setInterval(() => {
+      nextTestimonial();
+    }, 6000); // 6 seconds
+
+    return () => clearInterval(interval);
+  }, [testimonials.length, isPaused]);
+
   // Show loading or error state
   if (loading) {
     return (
@@ -181,7 +193,11 @@ const Testimonials = () => {
         <div className="container-custom">
           {/* Featured Testimonial Carousel */}
           <div className="max-w-4xl mx-auto mb-16">
-            <div className="relative">
+            <div
+              className="relative"
+              onMouseEnter={() => setIsPaused(true)}
+              onMouseLeave={() => setIsPaused(false)}
+            >
               <AnimatePresence mode="wait">
                 <motion.div
                   key={currentIndex}

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaSearch, FaEnvelope, FaPhone, FaUser, FaCheckCircle, FaClock } from 'react-icons/fa';
+import { FaSearch, FaEnvelope, FaPhone, FaUser, FaCheckCircle, FaClock, FaTrash } from 'react-icons/fa';
 import AdminLayout from '../../components/Admin/AdminLayout';
-import { getAllContacts, updateContactStatus as updateContactStatusDB } from '../../lib/supabase';
+import { getAllContacts, updateContactStatus as updateContactStatusDB, deleteContact } from '../../lib/supabase';
 
 const AdminContacts = () => {
   const [contacts, setContacts] = useState([]);
@@ -35,6 +35,21 @@ const AdminContacts = () => {
     } catch (error) {
       console.error('Error updating contact status:', error);
       alert('Failed to update contact status');
+    }
+  };
+
+  const handleDeleteContact = async (contact) => {
+    if (!confirm(`Are you sure you want to delete the contact submission from ${contact.name}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await deleteContact(contact.id);
+      setContacts(contacts.filter(c => c.id !== contact.id));
+      alert('Contact deleted successfully');
+    } catch (error) {
+      console.error('Error deleting contact:', error);
+      alert('Failed to delete contact');
     }
   };
 
@@ -198,6 +213,13 @@ const AdminContacts = () => {
                       <FaEnvelope />
                       <span>Reply via Email</span>
                     </a>
+                    <button
+                      onClick={() => handleDeleteContact(contact)}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm flex items-center space-x-2"
+                    >
+                      <FaTrash />
+                      <span>Delete</span>
+                    </button>
                   </div>
                 </div>
               </motion.div>

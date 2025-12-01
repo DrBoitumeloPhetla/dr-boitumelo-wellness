@@ -32,7 +32,9 @@ const AdminBlog = lazy(() => import('./pages/Admin/AdminBlog'));
 const AdminReviews = lazy(() => import('./pages/Admin/AdminReviews'));
 const AdminDiscounts = lazy(() => import('./pages/Admin/AdminDiscounts'));
 const AdminContacts = lazy(() => import('./pages/Admin/AdminContacts'));
+const AdminPrescriptionRequests = lazy(() => import('./pages/Admin/AdminPrescriptionRequests'));
 const ProtectedRoute = lazy(() => import('./components/Admin/ProtectedRoute'));
+const PrescriptionPurchase = lazy(() => import('./pages/PrescriptionPurchase'));
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -149,6 +151,17 @@ function App() {
         <Route path="/booking/success" element={<BookingSuccess />} />
         <Route path="/booking/cancel" element={<PaymentCancel />} />
 
+        {/* Prescription Purchase Route */}
+        <Route path="/prescription-purchase/:code" element={
+          <>
+            <Header />
+            <PrescriptionPurchase />
+            <Footer />
+            <CartModal />
+            <FloatingCartButton />
+          </>
+        } />
+
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={
@@ -189,6 +202,11 @@ function App() {
         <Route path="/admin/contacts" element={
           <ProtectedRoute>
             <AdminContacts />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/prescription-requests" element={
+          <ProtectedRoute>
+            <AdminPrescriptionRequests />
           </ProtectedRoute>
         } />
       </Routes>

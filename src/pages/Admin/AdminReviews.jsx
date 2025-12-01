@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { FaStar, FaCheck, FaTimes, FaEye, FaTrash, FaClock } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaStar, FaCheck, FaTimes, FaEye, FaTrash, FaClock, FaPlus, FaUpload, FaImage, FaVideo } from 'react-icons/fa';
 import AdminLayout from '../../components/Admin/AdminLayout';
-import { getAllReviews, getPendingReviews, updateReviewStatus, deleteReview } from '../../lib/supabase';
+import { getAllReviews, getPendingReviews, updateReviewStatus, deleteReview, uploadReviewMedia, createReviewWithMedia } from '../../lib/supabase';
 
 const AdminReviews = () => {
   const [reviews, setReviews] = useState([]);
@@ -10,6 +10,22 @@ const AdminReviews = () => {
   const [filter, setFilter] = useState('all'); // all, pending, approved, rejected
   const [selectedReview, setSelectedReview] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Add Review Modal State
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [newReview, setNewReview] = useState({
+    name: '',
+    email: '',
+    rating: 5,
+    review_text: '',
+    title: '',
+    product_name: '',
+    role: ''
+  });
+  const [mediaFile, setMediaFile] = useState(null);
+  const [mediaPreview, setMediaPreview] = useState(null);
+  const [mediaType, setMediaType] = useState(null);
 
   useEffect(() => {
     loadReviews();
@@ -86,6 +102,91 @@ const AdminReviews = () => {
     }
   };
 
+  const handleMediaSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+
+    if (!isImage && !isVideo) {
+      alert('Please select an image or video file');
+      return;
+    }
+
+    // Validate file size (50MB max)
+    if (file.size > 50 * 1024 * 1024) {
+      alert('File size must be less than 50MB');
+      return;
+    }
+
+    setMediaFile(file);
+    setMediaType(isImage ? 'image' : 'video');
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setMediaPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+
+    if (!newReview.name) {
+      alert('Please provide at least a customer name');
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      let mediaUrl = null;
+      let reviewMediaType = null;
+
+      // Upload media if provided
+      if (mediaFile) {
+        mediaUrl = await uploadReviewMedia(mediaFile);
+        reviewMediaType = mediaType;
+      }
+
+      // Create review
+      await createReviewWithMedia({
+        ...newReview,
+        email: newReview.email || 'noreply@drboitumelowellness.co.za',
+        media_url: mediaUrl,
+        media_type: reviewMediaType
+      });
+
+      alert('Review added successfully!');
+      setShowAddModal(false);
+      resetForm();
+      await loadReviews();
+    } catch (error) {
+      console.error('Error creating review:', error);
+      alert('Failed to create review. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setNewReview({
+      name: '',
+      email: '',
+      rating: 5,
+      review_text: '',
+      title: '',
+      product_name: '',
+      role: ''
+    });
+    setMediaFile(null);
+    setMediaPreview(null);
+    setMediaType(null);
+  };
+
   const getStatusBadge = (status) => {
     const styles = {
       pending: 'bg-yellow-100 text-yellow-800',
@@ -119,6 +220,13 @@ const AdminReviews = () => {
               )}
             </p>
           </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center space-x-2 px-6 py-3 bg-primary-green text-white rounded-lg hover:bg-green-dark transition-colors shadow-md hover:shadow-lg"
+          >
+            <FaPlus />
+            <span className="font-semibold">Add Review</span>
+          </button>
         </div>
 
         {/* Filters */}
@@ -314,6 +422,243 @@ const AdminReviews = () => {
             ))}
           </div>
         )}
+
+        {/* Add Review Modal */}
+        <AnimatePresence>
+          {showAddModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+              >
+                {/* Modal Header */}
+                <div className="bg-primary-green text-white p-6 rounded-t-2xl">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold">Add New Review</h2>
+                    <button
+                      onClick={() => {
+                        setShowAddModal(false);
+                        resetForm();
+                      }}
+                      className="text-white hover:text-gray-200 text-2xl"
+                    >
+                      <FaTimes />
+                    </button>
+                  </div>
+                  <p className="text-white/90 text-sm mt-2">
+                    Upload a video or image testimonial with optional text review
+                  </p>
+                </div>
+
+                {/* Modal Body */}
+                <form onSubmit={handleSubmitReview} className="p-6 space-y-6">
+                  {/* Basic Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Customer Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={newReview.name}
+                        onChange={(e) => setNewReview({ ...newReview, name: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
+                        placeholder="Anonymous Customer"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Email (Optional)
+                      </label>
+                      <input
+                        type="email"
+                        value={newReview.email}
+                        onChange={(e) => setNewReview({ ...newReview, email: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
+                        placeholder="customer@email.com"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Rating */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Rating
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setNewReview({ ...newReview, rating: star })}
+                          className="text-3xl focus:outline-none"
+                        >
+                          <FaStar
+                            className={star <= newReview.rating ? 'text-gold' : 'text-gray-300'}
+                          />
+                        </button>
+                      ))}
+                      <span className="ml-4 text-gray-600 font-medium">
+                        {newReview.rating} {newReview.rating === 1 ? 'star' : 'stars'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Optional Fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Product/Service (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={newReview.product_name}
+                        onChange={(e) => setNewReview({ ...newReview, product_name: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
+                        placeholder="Product name"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Role/Title (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={newReview.role}
+                        onChange={(e) => setNewReview({ ...newReview, role: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
+                        placeholder="Customer, Verified Buyer, etc."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Review Title */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Review Title (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={newReview.title}
+                      onChange={(e) => setNewReview({ ...newReview, title: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
+                      placeholder="Great product!"
+                    />
+                  </div>
+
+                  {/* Review Text */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Review Text (Optional)
+                    </label>
+                    <textarea
+                      value={newReview.review_text}
+                      onChange={(e) => setNewReview({ ...newReview, review_text: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
+                      rows="4"
+                      placeholder="Share the customer's experience..."
+                    />
+                  </div>
+
+                  {/* Media Upload */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Upload Media (Optional)
+                    </label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-green transition-colors">
+                      <input
+                        type="file"
+                        id="media-upload"
+                        accept="image/*,video/*"
+                        onChange={handleMediaSelect}
+                        className="hidden"
+                      />
+                      <label htmlFor="media-upload" className="cursor-pointer">
+                        <FaUpload className="text-4xl text-gray-400 mx-auto mb-3" />
+                        <p className="text-gray-600 font-medium mb-1">
+                          Click to upload image or video
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Max file size: 50MB
+                        </p>
+                      </label>
+                    </div>
+
+                    {/* Media Preview */}
+                    {mediaPreview && (
+                      <div className="mt-4 relative">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMediaFile(null);
+                            setMediaPreview(null);
+                            setMediaType(null);
+                          }}
+                          className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 z-10"
+                        >
+                          <FaTimes />
+                        </button>
+                        {mediaType === 'image' ? (
+                          <img
+                            src={mediaPreview}
+                            alt="Preview"
+                            className="w-full max-w-md mx-auto h-auto rounded-lg shadow-md"
+                          />
+                        ) : (
+                          <video
+                            src={mediaPreview}
+                            controls
+                            className="w-full max-w-md mx-auto h-auto rounded-lg shadow-md"
+                          />
+                        )}
+                        <p className="text-center text-sm text-gray-600 mt-2">
+                          {mediaType === 'image' ? <FaImage className="inline mr-1" /> : <FaVideo className="inline mr-1" />}
+                          {mediaFile?.name}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddModal(false);
+                        resetForm();
+                      }}
+                      className="px-6 py-3 border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={uploading}
+                      className="px-6 py-3 bg-primary-green text-white rounded-lg font-semibold hover:bg-green-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                    >
+                      {uploading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          <span>Uploading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FaCheck />
+                          <span>Add Review</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     </AdminLayout>
   );

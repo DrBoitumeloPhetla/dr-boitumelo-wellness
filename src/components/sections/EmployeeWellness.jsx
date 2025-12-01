@@ -461,12 +461,12 @@ const EmployeeWellness = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <a
-              href="https://wa.me/27615850286"
+              href="https://wa.me/27765776715"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-primary bg-gold hover:bg-gold-dark"
             >
-              WhatsApp: 061 585 0286
+              WhatsApp: 076 577 6715
             </a>
             <a
               href="mailto:drbb@drboitumelowellness.co.za"

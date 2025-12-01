@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { FaShoppingCart, FaStar, FaHeart, FaCheck, FaTag } from 'react-icons/fa';
+import { FaShoppingCart, FaStar, FaHeart, FaCheck, FaTag, FaPrescriptionBottle } from 'react-icons/fa';
 import { useCart } from '../../context/CartContext';
 import { getAllProducts } from '../../lib/supabase';
 import { getActiveDiscounts } from '../../lib/supabase';
+import PrescriptionRequestModal from '../ui/PrescriptionRequestModal';
 
 const Products = () => {
   const [ref, inView] = useInView({
@@ -18,6 +19,8 @@ const Products = () => {
   const [products, setProducts] = useState([]);
   const [discounts, setDiscounts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [prescriptionModalOpen, setPrescriptionModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const { addToCart } = useCart();
 
   useEffect(() => {
@@ -93,6 +96,13 @@ const Products = () => {
   };
 
   const handleAddToCart = (product) => {
+    // Check if product requires prescription
+    if (product.requires_prescription) {
+      setSelectedProduct(product);
+      setPrescriptionModalOpen(true);
+      return;
+    }
+
     // Calculate discount info
     const priceInfo = calculateDiscountedPrice(product);
 
@@ -178,8 +188,14 @@ const Products = () => {
               transition={{ delay: 0.1 * Math.min(index, 8), duration: 0.5 }}
               className="card-wellness group relative overflow-hidden"
             >
-              {/* Discount/Featured Badges */}
+              {/* Discount/Featured/Prescription Badges */}
               <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+                {product.requires_prescription && (
+                  <div className="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                    <FaPrescriptionBottle className="text-xs" />
+                    PRESCRIPTION REQUIRED
+                  </div>
+                )}
                 {hasDiscount && (
                   <div className="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 animate-pulse">
                     <FaTag className="text-xs" />
@@ -274,12 +290,19 @@ const Products = () => {
                     whileTap={{ scale: 0.95 }}
                     onClick={() => handleAddToCart(product)}
                     className={`p-3 rounded-lg transition-all flex items-center space-x-2 ${
-                      addedToCart.includes(product.id)
+                      product.requires_prescription
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : addedToCart.includes(product.id)
                         ? 'bg-green-600 text-white'
                         : 'bg-primary-green text-white hover:bg-green-dark'
                     }`}
                   >
-                    {addedToCart.includes(product.id) ? (
+                    {product.requires_prescription ? (
+                      <>
+                        <FaPrescriptionBottle />
+                        <span className="text-sm font-semibold">Request</span>
+                      </>
+                    ) : addedToCart.includes(product.id) ? (
                       <>
                         <FaCheck />
                         <span className="text-sm font-semibold">Added!</span>
@@ -308,6 +331,16 @@ const Products = () => {
           <button className="btn-primary">View Full Catalog</button>
         </motion.div>
       </div>
+
+      {/* Prescription Request Modal */}
+      <PrescriptionRequestModal
+        isOpen={prescriptionModalOpen}
+        onClose={() => {
+          setPrescriptionModalOpen(false);
+          setSelectedProduct(null);
+        }}
+        product={selectedProduct}
+      />
     </section>
   );
 };

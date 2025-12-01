@@ -101,8 +101,8 @@ const Contact = () => {
     {
       icon: <FaClock />,
       title: 'WhatsApp',
-      content: '061 585 0286',
-      link: 'https://wa.me/27615850286',
+      content: '076 577 6715',
+      link: 'https://wa.me/27765776715',
     },
   ];
 
