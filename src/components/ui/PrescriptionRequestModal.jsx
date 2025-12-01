@@ -122,25 +122,33 @@ const PrescriptionRequestModal = ({ isOpen, onClose, product }) => {
       setIsSuccess(true);
 
       // Send notification email to doctor (via Make.com webhook)
-      const webhookUrl = import.meta.env.VITE_MAKE_ORDER_WEBHOOK;
+      const webhookUrl = import.meta.env.VITE_MAKE_PRESCRIPTION_WEBHOOK || 'https://hook.eu2.make.com/v2qde71mrmnfm17fgvkp5dwivlg5oyyy';
       if (webhookUrl) {
-        await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'prescription_request',
-            productName: product.name,
-            customerName: formData.customerName,
-            customerEmail: formData.customerEmail,
-            customerPhone: formData.customerPhone,
-            healthInfo: formData.healthInfo,
-            documentUrls: fileUrls,
-            hasDocuments: fileUrls.length > 0,
-            requestId: result.id,
-            uniqueCode: result.unique_code,
-            timestamp: new Date().toISOString()
-          })
-        });
+        try {
+          await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'prescription_request',
+              productName: product.name,
+              customerName: formData.customerName,
+              customerEmail: formData.customerEmail,
+              customerPhone: formData.customerPhone,
+              healthInfo: formData.healthInfo,
+              documentUrls: fileUrls,
+              hasDocuments: fileUrls.length > 0,
+              requestId: result.id,
+              uniqueCode: result.unique_code,
+              timestamp: new Date().toISOString()
+            })
+          });
+          console.log('✅ Prescription webhook triggered successfully');
+        } catch (webhookError) {
+          console.error('Warning: Failed to trigger prescription webhook:', webhookError);
+          // Don't throw - prescription request was still created successfully
+        }
+      } else {
+        console.warn('Warning: VITE_MAKE_PRESCRIPTION_WEBHOOK not configured');
       }
 
     } catch (err) {
