@@ -68,62 +68,6 @@ const CartModal = () => {
     };
   }, [checkoutData, cartItems, showCheckout]);
 
-  // Capture abandoned cart when user tries to leave the page
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      // Only send if they have items in cart, filled in info, and haven't already sent or completed order
-      if (showCheckout &&
-          checkoutData.name &&
-          checkoutData.email &&
-          checkoutData.phone &&
-          cartItems.length > 0 &&
-          !abandonedCartSentRef.current &&
-          !orderComplete) {
-
-        const abandonedData = {
-          customer: checkoutData,
-          items: cartItems,
-          subtotal: getCartTotal(),
-          shipping: getShippingTotal(),
-          total: getGrandTotal()
-        };
-
-        // Use sendBeacon for reliable delivery when page is unloading
-        const blob = new Blob([JSON.stringify({
-          type: 'abandoned_cart',
-          timestamp: new Date().toISOString(),
-          customer: checkoutData,
-          cart: {
-            items: cartItems.map(item => ({
-              id: item.id,
-              name: item.name,
-              price: item.price,
-              quantity: item.quantity,
-              total: item.price * item.quantity
-            })),
-            subtotal: getCartTotal(),
-            shipping: getShippingTotal(),
-            total: getGrandTotal(),
-            itemCount: cartItems.reduce((sum, item) => sum + item.quantity, 0)
-          },
-          websiteUrl: window.location.origin,
-          cartUrl: `${window.location.origin}/shop`
-        })], { type: 'application/json' });
-
-        const webhook = import.meta.env.VITE_MAKE_ABANDONED_CART_WEBHOOK;
-        if (webhook) {
-          navigator.sendBeacon(webhook, blob);
-        }
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [showCheckout, checkoutData, cartItems, orderComplete]);
-
   const handleInputChange = (e) => {
     setCheckoutData({
       ...checkoutData,
@@ -192,30 +136,8 @@ const CartModal = () => {
     }
   };
 
-  const handleCloseModal = async () => {
-    // Capture abandoned cart if they filled in info but didn't complete
-    if (showCheckout &&
-        checkoutData.name &&
-        checkoutData.email &&
-        checkoutData.phone &&
-        cartItems.length > 0 &&
-        !abandonedCartSentRef.current &&
-        !orderComplete) {
-
-      const abandonedData = {
-        customer: checkoutData,
-        items: cartItems,
-        subtotal: getCartTotal(),
-        shipping: getShippingTotal(),
-        total: getGrandTotal()
-      };
-      // Save to database first
-      await saveAbandonedLead(checkoutData, 'abandoned_cart');
-      // Then send webhook
-      sendAbandonedCartToMake(abandonedData);
-      abandonedCartSentRef.current = true;
-    }
-
+  const handleCloseModal = () => {
+    // Don't send abandoned cart immediately - let the 30-minute timer handle it
     setIsCartOpen(false);
     setShowCheckout(false);
     setOrderComplete(false);
