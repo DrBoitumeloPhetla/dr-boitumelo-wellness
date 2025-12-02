@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   FaInstagram,
@@ -9,9 +10,12 @@ import {
   FaMapMarkerAlt,
   FaHeart,
 } from 'react-icons/fa';
+import { subscribeToNewsletter } from '../../lib/supabase';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterStatus, setNewsletterStatus] = useState({ type: '', message: '' });
 
   const quickLinks = [
     { name: 'About', href: '#about' },
@@ -41,6 +45,33 @@ const Footer = () => {
     const element = document.querySelector(href);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handleNewsletterSubmit = async (e) => {
+    e.preventDefault();
+
+    // Validate email
+    if (!newsletterEmail || !newsletterEmail.includes('@')) {
+      setNewsletterStatus({ type: 'error', message: 'Please enter a valid email address' });
+      return;
+    }
+
+    try {
+      const result = await subscribeToNewsletter(newsletterEmail);
+
+      if (result.success) {
+        setNewsletterStatus({ type: 'success', message: result.message });
+        setNewsletterEmail(''); // Clear input on success
+
+        // Clear success message after 5 seconds
+        setTimeout(() => {
+          setNewsletterStatus({ type: '', message: '' });
+        }, 5000);
+      }
+    } catch (error) {
+      console.error('Newsletter subscription error:', error);
+      setNewsletterStatus({ type: 'error', message: 'Something went wrong. Please try again.' });
     }
   };
 
@@ -170,11 +201,14 @@ const Footer = () => {
               <h5 className="font-montserrat font-semibold mb-3">
                 Newsletter
               </h5>
-              <form className="flex flex-col sm:flex-row gap-2">
+              <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="email"
+                  value={newsletterEmail}
+                  onChange={(e) => setNewsletterEmail(e.target.value)}
                   placeholder="Your email"
                   className="flex-1 px-4 py-2 rounded-lg sm:rounded-l-lg sm:rounded-r-none bg-white/10 border border-white/20 focus:outline-none focus:border-gold text-white placeholder-white/50"
+                  required
                 />
                 <button
                   type="submit"
@@ -183,6 +217,20 @@ const Footer = () => {
                   <FaEnvelope />
                 </button>
               </form>
+              {/* Status Message */}
+              {newsletterStatus.message && (
+                <motion.p
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`mt-2 text-sm ${
+                    newsletterStatus.type === 'success'
+                      ? 'text-green-300'
+                      : 'text-red-300'
+                  }`}
+                >
+                  {newsletterStatus.message}
+                </motion.p>
+              )}
             </div>
           </div>
         </div>

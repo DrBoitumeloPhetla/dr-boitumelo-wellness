@@ -2191,3 +2191,63 @@ export const deletePrescriptionRequest = async (requestId) => {
     throw error;
   }
 };
+
+// ============================================
+// NEWSLETTER SUBSCRIPTIONS
+// ============================================
+
+/**
+ * Subscribe to newsletter
+ */
+export const subscribeToNewsletter = async (email) => {
+  try {
+    // Check if email already exists in clients table
+    const { data: existing, error: fetchError } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error('Error checking existing subscriber:', fetchError);
+      throw fetchError;
+    }
+
+    // If already exists, just return success
+    if (existing) {
+      console.log('ℹ️ Email already subscribed');
+      return {
+        success: true,
+        message: 'You are already subscribed to our newsletter!',
+        alreadySubscribed: true
+      };
+    }
+
+    // Add new newsletter subscriber to clients table
+    const { data, error } = await supabase
+      .from('clients')
+      .insert([{
+        email: email,
+        client_type: 'newsletter',
+        source: 'newsletter_footer',
+        status: 'active'
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error subscribing to newsletter:', error);
+      throw error;
+    }
+
+    console.log('✅ Newsletter subscription successful:', data);
+    return {
+      success: true,
+      message: 'Successfully subscribed to our newsletter!',
+      alreadySubscribed: false
+    };
+  } catch (error) {
+    console.error('Error in subscribeToNewsletter:', error);
+    throw error;
+  }
+};
