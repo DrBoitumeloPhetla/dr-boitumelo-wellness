@@ -35,38 +35,58 @@ const CartModal = () => {
 
   const abandonedCartTimerRef = useRef(null);
   const abandonedCartSentRef = useRef(false);
+  const timerStartedRef = useRef(false);
 
   // Track abandoned cart - trigger after inactivity
+  // Start timer ONCE when user fills in required fields, don't restart on every keystroke
   useEffect(() => {
-    if (showCheckout && checkoutData.name && checkoutData.email && checkoutData.phone && cartItems.length > 0) {
-      // Clear any existing timer
-      if (abandonedCartTimerRef.current) {
-        clearTimeout(abandonedCartTimerRef.current);
-      }
+    const hasRequiredInfo = showCheckout && checkoutData.name && checkoutData.email && checkoutData.phone && cartItems.length > 0;
 
-      // Set new timer - send abandoned cart data after configured wait time
+    // Start timer only if we have required info and timer hasn't been started yet
+    if (hasRequiredInfo && !timerStartedRef.current && !abandonedCartSentRef.current) {
+      console.log('✅ Starting abandoned cart timer for 1 minute...');
+      timerStartedRef.current = true;
+
+      // Capture current checkout data to avoid stale closure
+      const currentCheckoutData = { ...checkoutData };
+      const currentCartItems = [...cartItems];
+
+      // Set timer - send abandoned cart data after configured wait time
       abandonedCartTimerRef.current = setTimeout(async () => {
-        const abandonedData = {
-          customer: checkoutData,
-          items: cartItems,
-          subtotal: getCartTotal(),
-          shipping: getShippingTotal(),
-          total: getGrandTotal()
-        };
-        // Save to database first
-        await saveAbandonedLead(checkoutData, 'abandoned_cart');
-        // Then send webhook
-        sendAbandonedCartToMake(abandonedData);
-        abandonedCartSentRef.current = true;
+        console.log('⏰ 1 minute elapsed - sending abandoned cart webhook...');
+        try {
+          const abandonedData = {
+            customer: currentCheckoutData,
+            items: currentCartItems,
+            subtotal: getCartTotal(),
+            shipping: getShippingTotal(),
+            total: getGrandTotal()
+          };
+
+          // Save to database first
+          console.log('💾 Saving abandoned lead to database...');
+          await saveAbandonedLead(currentCheckoutData, 'abandoned_cart');
+          console.log('✅ Saved to database');
+
+          // Then send webhook
+          console.log('📤 Sending webhook to Make.com...');
+          const result = await sendAbandonedCartToMake(abandonedData);
+          console.log('✅ Webhook response:', result);
+
+          abandonedCartSentRef.current = true;
+          console.log('✅ Abandoned cart webhook sent successfully!');
+        } catch (error) {
+          console.error('❌ Error sending abandoned cart:', error);
+        }
       }, ABANDONED_WAIT_TIME);
     }
 
+    // Cleanup: only clear on unmount, not on re-renders
     return () => {
-      if (abandonedCartTimerRef.current) {
-        clearTimeout(abandonedCartTimerRef.current);
-      }
+      // Don't clear the timer on re-renders - only when component unmounts
+      console.log('🔄 useEffect cleanup running, showCheckout:', showCheckout);
     };
-  }, [checkoutData, cartItems, showCheckout]);
+  }, [showCheckout, checkoutData.name, checkoutData.email, checkoutData.phone, cartItems.length]);
 
   const handleInputChange = (e) => {
     setCheckoutData({
@@ -111,10 +131,12 @@ const CartModal = () => {
     };
 
     try {
-      // Clear abandoned cart timer - they're completing the order!
+      // Clear abandoned cart timer and reset flags - they're completing the order!
       if (abandonedCartTimerRef.current) {
         clearTimeout(abandonedCartTimerRef.current);
       }
+      timerStartedRef.current = false;
+      abandonedCartSentRef.current = false;
 
       // Store order data in sessionStorage (will be created after payment confirmation)
       sessionStorage.setItem(`pending_order_${order_id}`, JSON.stringify(orderData));
@@ -137,7 +159,13 @@ const CartModal = () => {
   };
 
   const handleCloseModal = () => {
-    // Don't send abandoned cart immediately - let the 30-minute timer handle it
+    // Clear timer and reset flags when closing modal
+    if (abandonedCartTimerRef.current) {
+      clearTimeout(abandonedCartTimerRef.current);
+    }
+    timerStartedRef.current = false;
+    abandonedCartSentRef.current = false;
+
     setIsCartOpen(false);
     setShowCheckout(false);
     setOrderComplete(false);
