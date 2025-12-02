@@ -172,9 +172,9 @@ const CartModal = () => {
         clearTimeout(abandonedCartTimerRef.current);
       }
 
-      // Save to Supabase database
-      const savedOrder = await createOrder(orderData);
-      console.log('Order saved to Supabase successfully!');
+      // Store order data in sessionStorage (will be created after payment confirmation)
+      sessionStorage.setItem(`pending_order_${order_id}`, JSON.stringify(orderData));
+      console.log('Order data stored, redirecting to payment...');
 
       // Redirect to PayFast for payment
       console.log('Redirecting to PayFast for payment...');
@@ -187,7 +187,7 @@ const CartModal = () => {
       });
 
     } catch (error) {
-      console.error('Error saving order:', error);
+      console.error('Error processing checkout:', error);
       alert('There was an error processing your order. Please try again.');
     }
   };

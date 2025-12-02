@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaCheckCircle, FaHome, FaShoppingBag } from 'react-icons/fa';
-import { updateOrderStatus } from '../lib/supabase';
+import { createOrder } from '../lib/supabase';
 import { sendOrderConfirmationEmail } from '../lib/emailService';
 import { useCart } from '../context/CartContext';
 
@@ -36,13 +36,6 @@ const PaymentSuccess = () => {
       if (sessionStorage.getItem(processedKey)) {
         console.log('Order already processed in session, skipping...');
         setProcessing(false);
-        // Still fetch order details to display
-        try {
-          const order = await updateOrderStatus(orderId, 'processing');
-          setOrderDetails(order);
-        } catch (error) {
-          console.error('Error fetching order:', error);
-        }
         return;
       }
 
@@ -50,31 +43,52 @@ const PaymentSuccess = () => {
       hasProcessedRef.current = true;
 
       try {
-        // Update order status to 'processing'
-        const updatedOrder = await updateOrderStatus(orderId, 'processing');
-        setOrderDetails(updatedOrder);
+        // Get pending order data from sessionStorage
+        const pendingOrderKey = `pending_order_${orderId}`;
+        const orderDataString = sessionStorage.getItem(pendingOrderKey);
+
+        if (!orderDataString) {
+          console.error('No pending order data found for order ID:', orderId);
+          alert('Order data not found. Please contact support with order ID: ' + orderId);
+          setProcessing(false);
+          return;
+        }
+
+        // Parse order data
+        const orderData = JSON.parse(orderDataString);
+
+        // Update order status to 'processing' (payment confirmed)
+        orderData.status = 'processing';
+        orderData.payment_confirmed_at = new Date().toISOString();
+
+        // Create order in database (NOW, after payment confirmed!)
+        const createdOrder = await createOrder(orderData);
+        console.log('Order created successfully after payment confirmation!');
+        setOrderDetails(createdOrder);
 
         // Send confirmation emails ONLY ONCE
         await sendOrderConfirmationEmail({
-          customer_name: updatedOrder.customer_name,
-          customer_email: updatedOrder.customer_email,
-          customer_phone: updatedOrder.customer_phone,
-          items: updatedOrder.items,
-          subtotal: updatedOrder.subtotal,
-          shipping: updatedOrder.shipping || 0,
-          total: updatedOrder.total,
-          order_id: updatedOrder.id
+          customer_name: createdOrder.customer_name,
+          customer_email: createdOrder.customer_email,
+          customer_phone: createdOrder.customer_phone,
+          items: createdOrder.items,
+          subtotal: createdOrder.subtotal,
+          shipping: createdOrder.shipping || 0,
+          total: createdOrder.total,
+          order_id: createdOrder.id
         });
 
-        // Mark as processed in sessionStorage
+        // Mark as processed and clean up sessionStorage
         sessionStorage.setItem(processedKey, 'true');
+        sessionStorage.removeItem(pendingOrderKey);
 
         // Clear cart
         clearCart();
 
-        console.log('Payment successful! Order updated and emails sent.');
+        console.log('Payment successful! Order created and emails sent.');
       } catch (error) {
         console.error('Error processing payment success:', error);
+        alert('There was an error confirming your order. Please contact support.');
       } finally {
         setProcessing(false);
       }
