@@ -2201,9 +2201,9 @@ export const deletePrescriptionRequest = async (requestId) => {
  */
 export const subscribeToNewsletter = async (email) => {
   try {
-    // Check if email already exists in clients table
+    // Check if email already exists in newsletter_subscribers table
     const { data: existing, error: fetchError } = await supabase
-      .from('clients')
+      .from('newsletter_subscribers')
       .select('*')
       .eq('email', email)
       .maybeSingle();
@@ -2223,13 +2223,12 @@ export const subscribeToNewsletter = async (email) => {
       };
     }
 
-    // Add new newsletter subscriber to clients table
+    // Add new newsletter subscriber
     const { data, error } = await supabase
-      .from('clients')
+      .from('newsletter_subscribers')
       .insert([{
         email: email,
-        client_type: 'newsletter',
-        source: 'newsletter_footer',
+        source: 'website_footer',
         status: 'active'
       }])
       .select()
@@ -2237,6 +2236,7 @@ export const subscribeToNewsletter = async (email) => {
 
     if (error) {
       console.error('Error subscribing to newsletter:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       throw error;
     }
 
