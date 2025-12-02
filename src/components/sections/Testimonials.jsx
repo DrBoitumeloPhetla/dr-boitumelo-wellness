@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { FaStar, FaQuoteLeft, FaChevronLeft, FaChevronRight, FaPen } from 'react-icons/fa';
 import BookingModal from '../ui/BookingModal';
 import ReviewModal from '../ui/ReviewModal';
+import { getApprovedReviews } from '../../lib/supabase';
 
 const Testimonials = () => {
   const [ref, inView] = useInView({
@@ -14,8 +15,11 @@ const Testimonials = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [testimonials, setTestimonials] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const testimonials = [
+  // Hardcoded testimonials as fallback
+  const fallbackTestimonials = [
     {
       id: 1,
       name: 'Sarah Thompson',
@@ -66,6 +70,41 @@ const Testimonials = () => {
     },
   ];
 
+  // Fetch reviews from database
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const approvedReviews = await getApprovedReviews();
+
+        // Transform database reviews to match testimonial format
+        const transformedReviews = approvedReviews.map(review => ({
+          id: review.id,
+          name: review.name,
+          role: review.role || 'Customer',
+          rating: review.rating,
+          text: review.review_text,
+          condition: review.condition || 'Wellness',
+          media_type: review.media_type,
+          media_url: review.media_url
+        }));
+
+        // Use fetched reviews if available, otherwise use fallback
+        if (transformedReviews.length > 0) {
+          setTestimonials(transformedReviews);
+        } else {
+          setTestimonials(fallbackTestimonials);
+        }
+      } catch (error) {
+        console.error('Error fetching reviews:', error);
+        setTestimonials(fallbackTestimonials);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReviews();
+  }, []);
+
   const nextTestimonial = () => {
     setCurrentIndex((prev) => (prev + 1) % testimonials.length);
   };
@@ -73,6 +112,25 @@ const Testimonials = () => {
   const prevTestimonial = () => {
     setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <section id="testimonials" className="section-padding bg-cream">
+        <div className="container-custom">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-4 border-primary-green"></div>
+            <p className="mt-4 text-gray-600">Loading testimonials...</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Don't render if no testimonials
+  if (testimonials.length === 0) {
+    return null;
+  }
 
   return (
     <section id="testimonials" className="section-padding bg-cream" ref={ref}>
@@ -127,6 +185,25 @@ const Testimonials = () => {
                 <p className="text-lg md:text-xl text-gray-700 leading-relaxed mb-8 relative z-10">
                   "{testimonials[currentIndex].text}"
                 </p>
+
+                {/* Media (Image or Video) */}
+                {testimonials[currentIndex].media_url && (
+                  <div className="mb-8">
+                    {testimonials[currentIndex].media_type === 'image' ? (
+                      <img
+                        src={testimonials[currentIndex].media_url}
+                        alt={`${testimonials[currentIndex].name}'s review`}
+                        className="w-full max-h-96 object-cover rounded-2xl shadow-lg"
+                      />
+                    ) : testimonials[currentIndex].media_type === 'video' ? (
+                      <video
+                        src={testimonials[currentIndex].media_url}
+                        controls
+                        className="w-full max-h-96 rounded-2xl shadow-lg"
+                      />
+                    ) : null}
+                  </div>
+                )}
 
                 {/* Client Info */}
                 <div className="flex items-center space-x-4">
