@@ -120,13 +120,6 @@ const CartModal = () => {
     };
 
     try {
-      // Clear abandoned cart timer and reset flags - they're completing the order!
-      if (abandonedCartTimerRef.current) {
-        clearTimeout(abandonedCartTimerRef.current);
-      }
-      timerStartedRef.current = false;
-      abandonedCartSentRef.current = false;
-
       // Store order data in sessionStorage (will be created after payment confirmation)
       sessionStorage.setItem(`pending_order_${order_id}`, JSON.stringify(orderData));
       console.log('Order data stored, redirecting to payment...');
@@ -148,12 +141,8 @@ const CartModal = () => {
   };
 
   const handleCloseModal = () => {
-    // Clear timer and reset flags when closing modal
-    if (abandonedCartTimerRef.current) {
-      clearTimeout(abandonedCartTimerRef.current);
-    }
-    timerStartedRef.current = false;
-    abandonedCartSentRef.current = false;
+    // Reset checkout started flag when closing modal
+    checkoutStartedSentRef.current = false;
 
     setIsCartOpen(false);
     setShowCheckout(false);
