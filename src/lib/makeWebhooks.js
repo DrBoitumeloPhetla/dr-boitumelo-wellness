@@ -41,20 +41,16 @@ export const sendAbandonedCartToMake = async (cartData) => {
       cartUrl: `${window.location.origin}/shop`
     };
 
-    const response = await fetch(ABANDONED_CART_WEBHOOK, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload)
-    });
+    // Use sendBeacon for reliable delivery even if page is closing
+    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+    const sent = navigator.sendBeacon(ABANDONED_CART_WEBHOOK, blob);
 
-    if (!response.ok) {
-      throw new Error(`Make.com webhook failed: ${response.status}`);
+    if (sent) {
+      console.log('✅ Abandoned cart sent to Make.com successfully via sendBeacon');
+      return { success: true, data: payload };
+    } else {
+      throw new Error('sendBeacon failed to queue the request');
     }
-
-    console.log('✅ Abandoned cart sent to Make.com successfully');
-    return { success: true, data: payload };
   } catch (error) {
     console.error('❌ Error sending abandoned cart to Make.com:', error);
     return { success: false, error: error.message };
