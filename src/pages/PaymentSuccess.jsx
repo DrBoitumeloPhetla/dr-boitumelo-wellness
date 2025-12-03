@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { FaCheckCircle, FaHome, FaShoppingBag } from 'react-icons/fa';
 import { createOrder } from '../lib/supabase';
 import { sendOrderConfirmationEmail } from '../lib/emailService';
+import { sendPurchaseCompleted } from '../lib/makeWebhooks';
 import { useCart } from '../context/CartContext';
 
 const PaymentSuccess = () => {
@@ -76,6 +77,15 @@ const PaymentSuccess = () => {
           shipping: createdOrder.shipping || 0,
           total: createdOrder.total,
           order_id: createdOrder.id
+        });
+
+        // Send "Purchase Completed" webhook to cancel abandoned cart flow
+        sendPurchaseCompleted().then(result => {
+          if (result.success) {
+            console.log('✅ Purchase Completed webhook sent successfully');
+          } else {
+            console.warn('⚠️ Failed to send Purchase Completed webhook:', result.error);
+          }
         });
 
         // Mark as processed and clean up sessionStorage

@@ -2,6 +2,7 @@
 
 const ABANDONED_CART_WEBHOOK = import.meta.env.VITE_MAKE_ABANDONED_CART_WEBHOOK;
 const ABANDONED_BOOKING_WEBHOOK = import.meta.env.VITE_MAKE_ABANDONED_BOOKING_WEBHOOK;
+const CHECKOUT_TRACKING_WEBHOOK = 'https://hook.eu2.make.com/sh4jyus34epoqcsbc8mlypmvt3otxtw5';
 
 /**
  * Send abandoned cart data to Make.com for AI follow-up
@@ -178,6 +179,123 @@ export const sendLeadCaptureToMake = async (leadData, leadType = 'cart') => {
     return { success: true, data: payload };
   } catch (error) {
     console.error(`❌ Error sending lead capture to Make.com:`, error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Send "Checkout Started" event to Make.com
+ * This initiates the 30-minute abandoned cart timer in Make.com
+ * @param {Object} checkoutData - Customer and cart information
+ */
+export const sendCheckoutStarted = async (checkoutData) => {
+  if (!CHECKOUT_TRACKING_WEBHOOK) {
+    console.warn('Checkout tracking webhook not configured');
+    return { success: false, error: 'Webhook not configured' };
+  }
+
+  try {
+    // Generate or retrieve session ID
+    let sessionId = sessionStorage.getItem('checkout_session_id');
+    if (!sessionId) {
+      // Fallback for browsers that don't support crypto.randomUUID()
+      sessionId = crypto.randomUUID ? crypto.randomUUID() :
+        `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      sessionStorage.setItem('checkout_session_id', sessionId);
+    }
+
+    const payload = {
+      type: "checkout_started",
+      session_id: sessionId,
+      customer: {
+        name: checkoutData.customer.name,
+        email: checkoutData.customer.email,
+        phone: checkoutData.customer.phone
+      },
+      cart_items: checkoutData.items.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        total: item.price * item.quantity
+      })),
+      cart_total: checkoutData.total,
+      source: "website_checkout",
+      timestamp: new Date().toISOString()
+    };
+
+    console.log('📤 Sending Checkout Started webhook to Make.com...');
+    console.log('Session ID:', sessionId);
+
+    const response = await fetch(CHECKOUT_TRACKING_WEBHOOK, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      keepalive: true
+    });
+
+    if (!response.ok) {
+      throw new Error(`Webhook failed: ${response.status}`);
+    }
+
+    console.log('✅ Checkout Started sent to Make.com successfully');
+    return { success: true, sessionId, data: payload };
+  } catch (error) {
+    console.error('❌ Error sending Checkout Started to Make.com:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Send "Purchase Completed" event to Make.com
+ * This cancels the abandoned cart timer in Make.com
+ */
+export const sendPurchaseCompleted = async () => {
+  if (!CHECKOUT_TRACKING_WEBHOOK) {
+    console.warn('Checkout tracking webhook not configured');
+    return { success: false, error: 'Webhook not configured' };
+  }
+
+  try {
+    const sessionId = sessionStorage.getItem('checkout_session_id');
+
+    if (!sessionId) {
+      console.warn('No checkout session ID found');
+      return { success: false, error: 'No session ID' };
+    }
+
+    const payload = {
+      type: "purchase_completed",
+      session_id: sessionId,
+      timestamp: new Date().toISOString()
+    };
+
+    console.log('📤 Sending Purchase Completed webhook to Make.com...');
+    console.log('Session ID:', sessionId);
+
+    const response = await fetch(CHECKOUT_TRACKING_WEBHOOK, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      keepalive: true
+    });
+
+    if (!response.ok) {
+      throw new Error(`Webhook failed: ${response.status}`);
+    }
+
+    console.log('✅ Purchase Completed sent to Make.com successfully');
+
+    // Clear the session ID after successful purchase
+    sessionStorage.removeItem('checkout_session_id');
+
+    return { success: true, data: payload };
+  } catch (error) {
+    console.error('❌ Error sending Purchase Completed to Make.com:', error);
     return { success: false, error: error.message };
   }
 };

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaTrash, FaPlus, FaMinus, FaShoppingBag, FaCheckCircle } from 'react-icons/fa';
 import { useCart } from '../../context/CartContext';
 import { createOrder, saveAbandonedLead } from '../../lib/supabase';
-import { sendAbandonedCartToMake } from '../../lib/makeWebhooks';
+import { sendAbandonedCartToMake, sendCheckoutStarted, sendPurchaseCompleted } from '../../lib/makeWebhooks';
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '../../lib/emailService';
 import { redirectToPayFast } from '../../lib/payfast';
 
@@ -33,59 +33,47 @@ const CartModal = () => {
     notes: '',
   });
 
-  const abandonedCartTimerRef = useRef(null);
-  const abandonedCartSentRef = useRef(false);
-  const timerStartedRef = useRef(false);
+  const checkoutStartedSentRef = useRef(false);
 
-  // Track abandoned cart - trigger after inactivity
-  // Start timer ONCE when user fills in required fields, don't restart on every keystroke
+  // Send "Checkout Started" webhook when user fills in required fields
+  // This initiates the 30-minute timer in Make.com
   useEffect(() => {
     const hasRequiredInfo = showCheckout && checkoutData.name && checkoutData.email && checkoutData.phone && cartItems.length > 0;
 
-    // Start timer only if we have required info and timer hasn't been started yet
-    if (hasRequiredInfo && !timerStartedRef.current && !abandonedCartSentRef.current) {
-      const waitMinutes = Math.floor(ABANDONED_WAIT_TIME / 60000);
-      console.log(`✅ Starting abandoned cart timer for ${waitMinutes} minute(s)...`);
-      timerStartedRef.current = true;
+    // Send checkout started webhook once
+    if (hasRequiredInfo && !checkoutStartedSentRef.current) {
+      checkoutStartedSentRef.current = true;
 
-      // Capture current checkout data to avoid stale closure
-      const currentCheckoutData = { ...checkoutData };
-      const currentCartItems = [...cartItems];
+      const checkoutData_toSend = {
+        customer: {
+          name: checkoutData.name,
+          email: checkoutData.email,
+          phone: checkoutData.phone
+        },
+        items: cartItems,
+        total: getGrandTotal()
+      };
 
-      // Set timer - send abandoned cart data after configured wait time
-      abandonedCartTimerRef.current = setTimeout(async () => {
-        console.log(`⏰ ${waitMinutes} minute(s) elapsed - sending abandoned cart webhook...`);
-        try {
-          const abandonedData = {
-            customer: currentCheckoutData,
-            items: currentCartItems,
-            subtotal: getCartTotal(),
-            shipping: getShippingTotal(),
-            total: getGrandTotal()
-          };
-
-          // Save to database first
-          console.log('💾 Saving abandoned lead to database...');
-          await saveAbandonedLead(currentCheckoutData, 'abandoned_cart');
-          console.log('✅ Saved to database');
-
-          // Then send webhook
-          console.log('📤 Sending webhook to Make.com...');
-          const result = await sendAbandonedCartToMake(abandonedData);
-          console.log('✅ Webhook response:', result);
-
-          abandonedCartSentRef.current = true;
-          console.log('✅ Abandoned cart webhook sent successfully!');
-        } catch (error) {
-          console.error('❌ Error sending abandoned cart:', error);
+      // Send "Checkout Started" event to Make.com
+      sendCheckoutStarted(checkoutData_toSend).then(result => {
+        if (result.success) {
+          console.log('✅ Checkout Started webhook sent. Session ID:', result.sessionId);
+        } else {
+          console.error('❌ Failed to send Checkout Started webhook:', result.error);
         }
-      }, ABANDONED_WAIT_TIME);
+      });
+
+      // Also save to database for backup
+      saveAbandonedLead(checkoutData, 'abandoned_cart').catch(error => {
+        console.error('Failed to save abandoned lead:', error);
+      });
     }
 
-    // Cleanup: only clear on unmount, not on re-renders
+    // Cleanup: reset flag when checkout is closed
     return () => {
-      // Don't clear the timer on re-renders - only when component unmounts
-      console.log('🔄 useEffect cleanup running, showCheckout:', showCheckout);
+      if (!showCheckout) {
+        checkoutStartedSentRef.current = false;
+      }
     };
   }, [showCheckout, checkoutData.name, checkoutData.email, checkoutData.phone, cartItems.length]);
 
