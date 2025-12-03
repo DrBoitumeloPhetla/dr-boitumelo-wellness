@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { FaShoppingCart, FaStar, FaHeart, FaCheck, FaExclamationTriangle, FaTag } from 'react-icons/fa';
+import { FaShoppingCart, FaStar, FaHeart, FaCheck, FaExclamationTriangle, FaTag, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
 import { getActiveProducts, getActiveDiscounts } from '../lib/supabase';
 
@@ -14,6 +14,7 @@ const Shop = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [favorites, setFavorites] = useState([]);
   const [addedToCart, setAddedToCart] = useState([]);
+  const [expandedProducts, setExpandedProducts] = useState([]);
   const [products, setProducts] = useState([]);
   const [discounts, setDiscounts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -122,6 +123,14 @@ const Shop = () => {
 
   const toggleFavorite = (productId) => {
     setFavorites((prev) =>
+      prev.includes(productId)
+        ? prev.filter((id) => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const toggleExpanded = (productId) => {
+    setExpandedProducts((prev) =>
       prev.includes(productId)
         ? prev.filter((id) => id !== productId)
         : [...prev, productId]
@@ -313,6 +322,47 @@ const Shop = () => {
                     ))}
                   </ul>
 
+                  {/* View Details Button & Package Contents */}
+                  {product.package_contents && (
+                    <div className="mt-3">
+                      <button
+                        onClick={() => toggleExpanded(product.id)}
+                        className="flex items-center justify-between w-full text-sm font-semibold text-primary-green hover:text-green-dark transition-colors py-2 px-3 bg-sage/30 rounded-lg"
+                      >
+                        <span>What's in the package?</span>
+                        {expandedProducts.includes(product.id) ? (
+                          <FaChevronUp className="text-xs" />
+                        ) : (
+                          <FaChevronDown className="text-xs" />
+                        )}
+                      </button>
+
+                      <AnimatePresence>
+                        {expandedProducts.includes(product.id) && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="mt-2 p-3 bg-cream rounded-lg">
+                              <h4 className="text-xs font-semibold text-dark-text mb-2">Package Includes:</h4>
+                              <ul className="space-y-1">
+                                {product.package_contents.split('\n').filter(item => item.trim()).map((item, idx) => (
+                                  <li key={idx} className="text-xs text-gray-600 flex items-start">
+                                    <span className="text-primary-green mr-2">•</span>
+                                    {item.trim()}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
+
                   {/* Stock Information */}
                   <div className="text-xs text-gray-500 mt-2">
                     {isOutOfStock ? (
@@ -335,32 +385,12 @@ const Shop = () => {
                           <span className="text-2xl font-bold text-red-600">
                             R{priceInfo.discountedPrice.toFixed(2)}
                           </span>
-                          {product.shipping_cost > 0 && (
-                            <span className="text-xs text-gray-500 mt-1">
-                              + R{parseFloat(product.shipping_cost).toFixed(2)} shipping
-                            </span>
-                          )}
-                          {product.shipping_cost === 0 && (
-                            <span className="text-xs text-green-600 font-semibold mt-1">
-                              FREE SHIPPING
-                            </span>
-                          )}
                         </div>
                       ) : (
                         <div className="flex flex-col">
                           <span className="text-2xl font-bold text-primary-green">
                             R{product.price}
                           </span>
-                          {product.shipping_cost > 0 && (
-                            <span className="text-xs text-gray-500 mt-1">
-                              + R{parseFloat(product.shipping_cost).toFixed(2)} shipping
-                            </span>
-                          )}
-                          {product.shipping_cost === 0 && (
-                            <span className="text-xs text-green-600 font-semibold mt-1">
-                              FREE SHIPPING
-                            </span>
-                          )}
                         </div>
                       )}
                     </div>

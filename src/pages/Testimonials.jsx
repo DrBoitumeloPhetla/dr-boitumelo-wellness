@@ -294,44 +294,6 @@ const Testimonials = () => {
             </div>
           </div>
 
-          {/* Testimonial Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {testimonials.slice(0, 3).map((testimonial, index) => (
-              <motion.div
-                key={testimonial.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={inView ? { opacity: 1, y: 0 } : {}}
-                transition={{ delay: 0.2 + index * 0.1 }}
-                className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow"
-              >
-                {/* Rating */}
-                <div className="flex items-center space-x-1 mb-3">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <FaStar key={i} className="text-gold" />
-                  ))}
-                </div>
-
-                {/* Text */}
-                <p className="text-gray-700 mb-4 line-clamp-4">
-                  "{testimonial.text}"
-                </p>
-
-                {/* Client */}
-                <div className="flex items-center space-x-3 pt-4 border-t border-gray-200">
-                  <div className="w-10 h-10 bg-gradient-to-br from-primary-green to-green-dark rounded-full flex items-center justify-center text-white font-bold">
-                    {testimonial.name.charAt(0)}
-                  </div>
-                  <div>
-                    <h5 className="font-montserrat font-semibold text-dark-text">
-                      {testimonial.name}
-                    </h5>
-                    <p className="text-xs text-gray-600">{testimonial.role}</p>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
           {/* CTA */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}

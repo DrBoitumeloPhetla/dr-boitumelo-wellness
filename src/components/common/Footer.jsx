@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   FaInstagram,
   FaLinkedin,
@@ -12,13 +13,14 @@ import {
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+  const navigate = useNavigate();
 
   const quickLinks = [
-    { name: 'About', href: '#about' },
-    { name: 'Products', href: '#products' },
-    { name: 'Services', href: '#services' },
-    { name: 'Reviews', href: '#testimonials' },
-    { name: 'Contact', href: '#contact' },
+    { name: 'About', href: '/#about' },
+    { name: 'Products', href: '/#products' },
+    { name: 'Services', href: '/#services' },
+    { name: 'Reviews', href: '/testimonials' },
+    { name: 'Contact', href: '/#contact' },
   ];
 
   const productCategories = [
@@ -28,6 +30,8 @@ const Footer = () => {
     'Beauty & Wellness',
     'Multivitamins',
     'Heart Health',
+    'Brain Health',
+    'Reproductive Health',
   ];
 
   const legalLinks = [
@@ -36,6 +40,30 @@ const Footer = () => {
     { name: 'Shipping Policy', href: '#' },
     { name: 'Return Policy', href: '#' },
   ];
+
+  const handleNavigation = (href) => {
+    if (href.startsWith('/#')) {
+      // If already on home page, scroll to section
+      if (window.location.pathname === '/') {
+        const element = document.querySelector(href.substring(1));
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      } else {
+        // Navigate to home page first, then scroll
+        navigate('/');
+        setTimeout(() => {
+          const element = document.querySelector(href.substring(1));
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 100);
+      }
+    } else {
+      // Regular navigation
+      navigate(href);
+    }
+  };
 
   const scrollToSection = (href) => {
     const element = document.querySelector(href);
@@ -93,17 +121,13 @@ const Footer = () => {
             <ul className="space-y-3">
               {quickLinks.map((link) => (
                 <li key={link.name}>
-                  <a
-                    href={link.href}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      scrollToSection(link.href);
-                    }}
-                    className="text-white/80 hover:text-gold transition-colors flex items-center"
+                  <button
+                    onClick={() => handleNavigation(link.href)}
+                    className="text-white/80 hover:text-gold transition-colors flex items-center text-left"
                   >
                     <span className="mr-2">›</span>
                     {link.name}
-                  </a>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -117,17 +141,13 @@ const Footer = () => {
             <ul className="space-y-3">
               {productCategories.map((category) => (
                 <li key={category}>
-                  <a
-                    href="#products"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      scrollToSection('#products');
-                    }}
-                    className="text-white/80 hover:text-gold transition-colors flex items-center"
+                  <button
+                    onClick={() => handleNavigation('/#products')}
+                    className="text-white/80 hover:text-gold transition-colors flex items-center text-left"
                   >
                     <span className="mr-2">›</span>
                     {category}
-                  </a>
+                  </button>
                 </li>
               ))}
             </ul>

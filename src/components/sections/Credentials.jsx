@@ -47,7 +47,7 @@ const Credentials = () => {
     },
     {
       icon: <FaMedal />,
-      title: 'Medical and Scientific Leader',
+      title: 'Medical and Scientific Scholar',
       year: 'Evidence-Based Wellness',
     },
     {

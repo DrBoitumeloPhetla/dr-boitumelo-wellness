@@ -87,6 +87,12 @@ const Contact = () => {
       link: 'mailto:admin@drboitumelowellness.co.za',
     },
     {
+      icon: <FaEnvelope />,
+      title: 'Email',
+      content: 'sales@drboitumelowellness.co.za',
+      link: 'mailto:sales@drboitumelowellness.co.za',
+    },
+    {
       icon: <FaPhone />,
       title: 'Phone',
       content: '017 685 2263 | 078 725 3389',

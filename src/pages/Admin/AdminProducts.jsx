@@ -30,13 +30,14 @@ const AdminProducts = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    category: 'supplements',
+    category: 'Antioxidants',
     price: '',
     shipping_cost: '0',
     stock_quantity: '',
     low_stock_threshold: 10,
     image_url: '',
     benefits: '',
+    package_contents: '',
     status: 'active',
     featured: false
   });
@@ -108,6 +109,7 @@ const AdminProducts = () => {
       low_stock_threshold: 10,
       image_url: '',
       benefits: '',
+      package_contents: '',
       status: 'active',
       featured: false
     });
@@ -121,9 +123,13 @@ const AdminProducts = () => {
 
     let finalImageUrl = formData.image_url;
 
-    // If user uploaded an image file, convert to base64
+    // If user uploaded a new image file, use that
     if (imageFile) {
       finalImageUrl = imagePreview; // Use the base64 preview as the image URL
+    }
+    // If editing and no new image uploaded, keep existing image from original product
+    else if (editingProduct && !imageFile) {
+      finalImageUrl = editingProduct.image_url; // Use the original image URL from database
     }
 
     const productData = {
@@ -134,6 +140,8 @@ const AdminProducts = () => {
       low_stock_threshold: parseInt(formData.low_stock_threshold),
       benefits: formData.benefits.split(',').map(b => b.trim()).filter(b => b)
     };
+
+    console.log('Saving product with image URL length:', finalImageUrl?.length || 0);
 
     try {
       if (editingProduct) {
@@ -148,7 +156,8 @@ const AdminProducts = () => {
       loadLowStockProducts();
     } catch (error) {
       console.error('Error saving product:', error);
-      alert('Failed to save product');
+      console.error('Error details:', error.message);
+      alert(`Failed to save product: ${error.message}`);
     }
   };
 
@@ -164,6 +173,7 @@ const AdminProducts = () => {
       low_stock_threshold: product.low_stock_threshold,
       image_url: product.image_url || '',
       benefits: product.benefits ? product.benefits.join(', ') : '',
+      package_contents: product.package_contents || '',
       status: product.status,
       featured: product.featured
     });
@@ -437,10 +447,18 @@ const AdminProducts = () => {
                         required
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
                       >
-                        <option value="supplements">Supplements</option>
-                        <option value="wellness">Wellness</option>
-                        <option value="skincare">Skincare</option>
-                        <option value="books">Books</option>
+                        <option value="Antioxidants">Antioxidants</option>
+                        <option value="Minerals">Minerals</option>
+                        <option value="Immune Support">Immune Support</option>
+                        <option value="Wellness Packages">Wellness Packages</option>
+                        <option value="Digestive Health">Digestive Health</option>
+                        <option value="Wellness Accessories">Wellness Accessories</option>
+                        <option value="Heart Health">Heart Health</option>
+                        <option value="Beauty & Wellness">Beauty & Wellness</option>
+                        <option value="Multivitamins">Multivitamins</option>
+                        <option value="Nutrition">Nutrition</option>
+                        <option value="Brain Health">Brain Health</option>
+                        <option value="Reproductive Health">Reproductive Health</option>
                       </select>
                     </div>
                     <div>
@@ -553,16 +571,17 @@ const AdminProducts = () => {
                       </div>
 
                       <div>
-                        <label className="block text-xs text-gray-600 mb-1">Enter Image URL</label>
+                        <label className="block text-xs text-gray-600 mb-1">Enter Image URL (optional)</label>
                         <input
-                          type="url"
+                          type="text"
                           name="image_url"
                           value={formData.image_url}
                           onChange={handleInputChange}
-                          disabled={!!imageFile}
+                          disabled={!!imageFile || !!imagePreview}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                           placeholder="https://example.com/image.jpg"
                         />
+                        <p className="text-xs text-gray-500 mt-1">Only needed if adding a new product without uploading a file</p>
                       </div>
                     </div>
                   </div>
@@ -580,6 +599,26 @@ const AdminProducts = () => {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
                       placeholder="Boosts immunity, Increases energy, Supports health"
                     />
+                  </div>
+
+                  {/* Package Contents */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Package Contents (What's in the package)
+                    </label>
+                    <textarea
+                      name="package_contents"
+                      value={formData.package_contents}
+                      onChange={handleInputChange}
+                      rows="5"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent resize-none"
+                      placeholder="List each item on a new line, e.g.:
+Oxidation Entero
+Hydrolysed Collagen
+Oxidation VitaMinerals
+Omega 3 (EPA & DHA)"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Enter each ingredient/item on a new line. This will be shown to customers when they click "View Details".</p>
                   </div>
 
                   {/* Status and Featured */}

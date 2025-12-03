@@ -16,6 +16,10 @@ const MediaSection = ({ showAllVideos = false }) => {
     {
       id: 'LedyP0jUF8I',
       title: 'Holistic Health Approach'
+    },
+    {
+      id: 'AQ1zvMFZfRg',
+      title: 'Featured Talk'
     }
   ];
 
@@ -46,7 +50,7 @@ const MediaSection = ({ showAllVideos = false }) => {
     }
   ];
 
-  const displayVideos = showAllVideos ? videos : videos.slice(0, 2);
+  const displayVideos = showAllVideos ? videos : videos;
 
   return (
     <section className="section-padding bg-sage/20">
@@ -69,7 +73,7 @@ const MediaSection = ({ showAllVideos = false }) => {
         </motion.div>
 
         {/* Video Grid */}
-        <div className={`grid gap-8 mb-12 ${showAllVideos ? 'md:grid-cols-2 lg:grid-cols-3' : 'md:grid-cols-2'}`}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
           {displayVideos.map((video, index) => (
             <VideoEmbed
               key={video.id}

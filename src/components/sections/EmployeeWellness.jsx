@@ -330,21 +330,21 @@ const EmployeeWellness = () => {
                   </li>
                   <li className="flex items-start space-x-2">
                     <span className="text-primary-green mt-1">•</span>
-                    <span className="text-gray-700">VitaMinerals</span>
+                    <span className="text-gray-700">VitaMinerals Start</span>
                   </li>
                 </ul>
                 <div className="space-y-3 pt-4 border-t border-gray-200">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">2 Months Supply</span>
-                    <span className="font-bold text-primary-green">R1300</span>
+                    <span className="font-bold text-primary-green">R1399</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">6 Months Supply</span>
-                    <span className="font-bold text-primary-green">R3607.50</span>
+                    <span className="font-bold text-primary-green">R3,881.53</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">12 Months Supply</span>
-                    <span className="font-bold text-primary-green">R6630</span>
+                    <span className="font-bold text-primary-green">R7,554.60</span>
                   </div>
                 </div>
               </div>
@@ -435,11 +435,11 @@ const EmployeeWellness = () => {
               </div>
               <div className="flex items-center space-x-4 bg-white/10 rounded-lg p-4">
                 <div className="flex-shrink-0 w-16 h-16 bg-green-900 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                  15%
+                  10%
                 </div>
                 <div className="text-white">
                   <p className="font-semibold">12-months supply</p>
-                  <p className="text-sm opacity-80">15% discount</p>
+                  <p className="text-sm opacity-80">10% discount</p>
                 </div>
               </div>
             </div>
