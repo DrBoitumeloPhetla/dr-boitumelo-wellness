@@ -44,7 +44,8 @@ const CartModal = () => {
 
     // Start timer only if we have required info and timer hasn't been started yet
     if (hasRequiredInfo && !timerStartedRef.current && !abandonedCartSentRef.current) {
-      console.log('✅ Starting abandoned cart timer for 1 minute...');
+      const waitMinutes = Math.floor(ABANDONED_WAIT_TIME / 60000);
+      console.log(`✅ Starting abandoned cart timer for ${waitMinutes} minute(s)...`);
       timerStartedRef.current = true;
 
       // Capture current checkout data to avoid stale closure
@@ -53,7 +54,7 @@ const CartModal = () => {
 
       // Set timer - send abandoned cart data after configured wait time
       abandonedCartTimerRef.current = setTimeout(async () => {
-        console.log('⏰ 1 minute elapsed - sending abandoned cart webhook...');
+        console.log(`⏰ ${waitMinutes} minute(s) elapsed - sending abandoned cart webhook...`);
         try {
           const abandonedData = {
             customer: currentCheckoutData,

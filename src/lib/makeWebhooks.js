@@ -41,15 +41,39 @@ export const sendAbandonedCartToMake = async (cartData) => {
       cartUrl: `${window.location.origin}/shop`
     };
 
-    // Use sendBeacon for reliable delivery even if page is closing
-    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-    const sent = navigator.sendBeacon(ABANDONED_CART_WEBHOOK, blob);
+    console.log('🔍 Webhook URL:', ABANDONED_CART_WEBHOOK);
+    console.log('📦 Payload:', payload);
 
-    if (sent) {
-      console.log('✅ Abandoned cart sent to Make.com successfully via sendBeacon');
+    // Try fetch first with keepalive flag (similar to sendBeacon but with better compatibility)
+    try {
+      console.log('📤 Sending webhook with fetch + keepalive...');
+      const response = await fetch(ABANDONED_CART_WEBHOOK, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        keepalive: true // This keeps the request alive even if page closes
+      });
+
+      if (!response.ok) {
+        throw new Error(`Webhook failed: ${response.status}`);
+      }
+
+      console.log('✅ Abandoned cart sent to Make.com successfully');
       return { success: true, data: payload };
-    } else {
-      throw new Error('sendBeacon failed to queue the request');
+    } catch (fetchError) {
+      // If fetch fails, fallback to sendBeacon as last resort
+      console.warn('⚠️ Fetch failed, trying sendBeacon as fallback:', fetchError);
+      const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+      const sent = navigator.sendBeacon(ABANDONED_CART_WEBHOOK, blob);
+
+      if (sent) {
+        console.log('✅ Sent via sendBeacon fallback');
+        return { success: true, data: payload };
+      }
+
+      throw fetchError; // Throw original error
     }
   } catch (error) {
     console.error('❌ Error sending abandoned cart to Make.com:', error);
