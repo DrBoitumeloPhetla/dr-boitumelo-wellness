@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaSearch, FaEye, FaCheckCircle, FaTruck, FaClock, FaTrash, FaEnvelope } from 'react-icons/fa';
 import AdminLayout from '../../components/Admin/AdminLayout';
+import { useAdmin } from '../../context/AdminContext';
 import { getAllOrders, updateOrderStatus as updateOrderStatusDB, deleteOrder } from '../../lib/supabase';
 import { sendOrderConfirmationEmail } from '../../lib/emailService';
 
-const AdminOrders = () => {
+// Inner component that uses AdminContext
+const AdminOrdersContent = () => {
+  const { log, canPerform } = useAdmin();
   const [orders, setOrders] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -27,8 +30,25 @@ const AdminOrders = () => {
   };
 
   const updateOrderStatus = async (orderId, newStatus) => {
+    const order = orders.find(o => o.id === orderId);
+
     try {
       await updateOrderStatusDB(orderId, newStatus);
+
+      // Log the update activity
+      await log({
+        actionType: 'update',
+        resourceType: 'order',
+        resourceId: orderId,
+        resourceName: `Order #${orderId.slice(0, 8)}`,
+        details: {
+          customerName: order?.customer?.name,
+          previousStatus: order?.status,
+          newStatus: newStatus,
+          totalAmount: order?.total
+        }
+      });
+
       // Update local state
       const updatedOrders = orders.map(order =>
         order.id === orderId ? { ...order, status: newStatus } : order
@@ -75,12 +95,35 @@ const AdminOrders = () => {
   };
 
   const handleDeleteOrder = async (orderId, orderNumber) => {
+    // Check permissions
+    if (!canPerform('delete')) {
+      alert('You do not have permission to delete orders. Only super admins can delete orders.');
+      return;
+    }
+
     if (!confirm(`Are you sure you want to delete Order #${orderNumber}? This action cannot be undone.`)) {
       return;
     }
 
+    const order = orders.find(o => o.id === orderId);
+
     try {
       await deleteOrder(orderId);
+
+      // Log the delete activity
+      await log({
+        actionType: 'delete',
+        resourceType: 'order',
+        resourceId: orderId,
+        resourceName: `Order #${orderNumber}`,
+        details: {
+          customerName: order?.customer?.name,
+          customerEmail: order?.customer?.email,
+          totalAmount: order?.total,
+          deletedAt: new Date().toISOString()
+        }
+      });
+
       alert(`Order #${orderNumber} has been deleted successfully`);
       await loadOrders();
     } catch (error) {
@@ -119,8 +162,7 @@ const AdminOrders = () => {
   };
 
   return (
-    <AdminLayout>
-      <div>
+    <div>
         <div className="mb-8">
           <h1 className="text-3xl font-montserrat font-bold text-dark-text mb-2">
             Orders Management
@@ -300,6 +342,14 @@ const AdminOrders = () => {
           </div>
         )}
       </div>
+  );
+};
+
+// Wrapper component
+const AdminOrders = () => {
+  return (
+    <AdminLayout>
+      <AdminOrdersContent />
     </AdminLayout>
   );
 };

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { FaCheck, FaTimes, FaPrescriptionBottle, FaEnvelope, FaPhone, FaCalendar, FaCopy, FaFilePdf, FaFileImage, FaExternalLinkAlt, FaTrash } from 'react-icons/fa';
+import { FaCheck, FaTimes, FaPrescriptionBottle, FaEnvelope, FaPhone, FaCalendar, FaCopy, FaFilePdf, FaFileImage, FaExternalLinkAlt, FaTrash, FaEyeSlash } from 'react-icons/fa';
 import AdminLayout from '../../components/Admin/AdminLayout';
+import { useAdmin } from '../../context/AdminContext';
 import {
   getAllPrescriptionRequests,
   approvePrescriptionRequest,
@@ -9,7 +10,9 @@ import {
   deletePrescriptionRequest
 } from '../../lib/supabase';
 
-const AdminPrescriptionRequests = () => {
+// Inner component that uses AdminContext
+const AdminPrescriptionRequestsContent = () => {
+  const { canPerform, isStaffUser, log } = useAdmin();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, pending, approved, denied
@@ -38,6 +41,12 @@ const AdminPrescriptionRequests = () => {
   };
 
   const handleApprove = async (request) => {
+    // Check permission
+    if (!canPerform('approve_prescription')) {
+      alert('You do not have permission to approve prescriptions. Only super admins can approve prescription requests.');
+      return;
+    }
+
     if (!confirm(`Approve prescription request for ${request.customer_name}?`)) return;
 
     // Prevent duplicate webhook triggers
@@ -57,6 +66,19 @@ const AdminPrescriptionRequests = () => {
       setProcessingRequest(request.id);
 
       await approvePrescriptionRequest(request.id, 'Dr. Boitumelo Phetla');
+
+      // Log activity
+      await log({
+        actionType: 'approve',
+        resourceType: 'prescription',
+        resourceId: request.id,
+        resourceName: `${request.customer_name} - ${request.products?.name}`,
+        details: {
+          customerEmail: request.customer_email,
+          productName: request.products?.name,
+          uniqueCode: request.unique_code
+        }
+      });
 
       // Send approval email with purchase link via Make.com
       const webhookUrl = import.meta.env.VITE_MAKE_PRESCRIPTION_WEBHOOK || 'https://hook.eu2.make.com/v2qde71mrmnfm17fgvkp5dwivlg5oyyy';
@@ -109,6 +131,13 @@ const AdminPrescriptionRequests = () => {
   };
 
   const handleDeny = async () => {
+    // Check permission
+    if (!canPerform('reject_prescription')) {
+      alert('You do not have permission to reject prescriptions. Only super admins can reject prescription requests.');
+      setShowDenialModal(false);
+      return;
+    }
+
     if (!denialReason.trim()) {
       alert('Please provide a reason for denial');
       return;
@@ -131,6 +160,19 @@ const AdminPrescriptionRequests = () => {
       setProcessingRequest(selectedRequest.id);
 
       await denyPrescriptionRequest(selectedRequest.id, denialReason);
+
+      // Log activity
+      await log({
+        actionType: 'reject',
+        resourceType: 'prescription',
+        resourceId: selectedRequest.id,
+        resourceName: `${selectedRequest.customer_name} - ${selectedRequest.products?.name}`,
+        details: {
+          customerEmail: selectedRequest.customer_email,
+          productName: selectedRequest.products?.name,
+          denialReason: denialReason
+        }
+      });
 
       // Send denial email via Make.com
       const webhookUrl = import.meta.env.VITE_MAKE_PRESCRIPTION_WEBHOOK || 'https://hook.eu2.make.com/v2qde71mrmnfm17fgvkp5dwivlg5oyyy';
@@ -176,12 +218,32 @@ const AdminPrescriptionRequests = () => {
   };
 
   const handleDelete = async (request) => {
+    // Check permission
+    if (!canPerform('delete_prescription')) {
+      alert('You do not have permission to delete prescriptions. Only super admins can delete prescription requests.');
+      return;
+    }
+
     if (!confirm(`Are you sure you want to delete the prescription request from ${request.customer_name}? This action cannot be undone.`)) {
       return;
     }
 
     try {
       await deletePrescriptionRequest(request.id);
+
+      // Log activity
+      await log({
+        actionType: 'delete',
+        resourceType: 'prescription',
+        resourceId: request.id,
+        resourceName: `${request.customer_name} - ${request.products?.name}`,
+        details: {
+          customerEmail: request.customer_email,
+          productName: request.products?.name,
+          status: request.status
+        }
+      });
+
       alert('Prescription request deleted successfully');
       loadRequests();
     } catch (error) {
@@ -210,14 +272,19 @@ const AdminPrescriptionRequests = () => {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">Prescription Requests</h1>
-            <p className="text-gray-600 mt-1">Manage customer requests for prescription-required products</p>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">Prescription Requests</h1>
+          <p className="text-gray-600 mt-1">Manage customer requests for prescription-required products</p>
+        </div>
+          {isStaffUser() && (
+            <div className="flex items-center space-x-2 px-4 py-2 bg-blue-100 text-blue-800 rounded-lg border border-blue-300">
+              <FaEyeSlash />
+              <span className="font-semibold text-sm">View Only Mode</span>
+            </div>
+          )}
         </div>
 
         {/* Filter Tabs */}
@@ -362,37 +429,44 @@ const AdminPrescriptionRequests = () => {
                       </td>
                       <td className="px-6 py-4">
                         {request.status === 'pending' ? (
-                          <div className="flex flex-col space-y-2">
-                            <div className="flex space-x-2">
+                          canPerform('approve_prescription') ? (
+                            <div className="flex flex-col space-y-2">
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={() => handleApprove(request)}
+                                  disabled={processingRequest === request.id}
+                                  className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 flex items-center space-x-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <FaCheck />
+                                  <span>{processingRequest === request.id ? 'Processing...' : 'Approve'}</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedRequest(request);
+                                    setShowDenialModal(true);
+                                  }}
+                                  disabled={processingRequest === request.id}
+                                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 flex items-center space-x-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <FaTimes />
+                                  <span>Deny</span>
+                                </button>
+                              </div>
                               <button
-                                onClick={() => handleApprove(request)}
+                                onClick={() => handleDelete(request)}
                                 disabled={processingRequest === request.id}
-                                className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 flex items-center space-x-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center space-x-1 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <FaCheck />
-                                <span>{processingRequest === request.id ? 'Processing...' : 'Approve'}</span>
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedRequest(request);
-                                  setShowDenialModal(true);
-                                }}
-                                disabled={processingRequest === request.id}
-                                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 flex items-center space-x-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <FaTimes />
-                                <span>Deny</span>
+                                <FaTrash />
+                                <span>Delete</span>
                               </button>
                             </div>
-                            <button
-                              onClick={() => handleDelete(request)}
-                              disabled={processingRequest === request.id}
-                              className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center space-x-1 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <FaTrash />
-                              <span>Delete</span>
-                            </button>
-                          </div>
+                          ) : (
+                            <div className="text-sm text-gray-500 italic flex items-center space-x-1">
+                              <FaEyeSlash className="text-xs" />
+                              <span>View Only</span>
+                            </div>
+                          )
                         ) : request.status === 'approved' ? (
                           <div className="space-y-1">
                             <button
@@ -407,13 +481,15 @@ const AdminPrescriptionRequests = () => {
                                 Expires: {new Date(request.expires_at).toLocaleDateString()}
                               </div>
                             )}
-                            <button
-                              onClick={() => handleDelete(request)}
-                              className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center space-x-1 text-xs"
-                            >
-                              <FaTrash />
-                              <span>Delete</span>
-                            </button>
+                            {canPerform('delete_prescription') && (
+                              <button
+                                onClick={() => handleDelete(request)}
+                                className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center space-x-1 text-xs"
+                              >
+                                <FaTrash />
+                                <span>Delete</span>
+                              </button>
+                            )}
                           </div>
                         ) : (
                           <div className="space-y-2">
@@ -424,13 +500,15 @@ const AdminPrescriptionRequests = () => {
                                 </div>
                               )}
                             </div>
-                            <button
-                              onClick={() => handleDelete(request)}
-                              className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center space-x-1 text-xs"
-                            >
-                              <FaTrash />
-                              <span>Delete</span>
-                            </button>
+                            {canPerform('delete_prescription') && (
+                              <button
+                                onClick={() => handleDelete(request)}
+                                className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center space-x-1 text-xs"
+                              >
+                                <FaTrash />
+                                <span>Delete</span>
+                              </button>
+                            )}
                           </div>
                         )}
                       </td>
@@ -441,10 +519,9 @@ const AdminPrescriptionRequests = () => {
             </div>
           )}
         </div>
-      </div>
 
-      {/* Denial Modal */}
-      {showDenialModal && (
+        {/* Denial Modal */}
+        {showDenialModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -484,7 +561,16 @@ const AdminPrescriptionRequests = () => {
             </div>
           </motion.div>
         </div>
-      )}
+        )}
+      </div>
+    );
+  };
+
+// Wrapper component
+const AdminPrescriptionRequests = () => {
+  return (
+    <AdminLayout>
+      <AdminPrescriptionRequestsContent />
     </AdminLayout>
   );
 };

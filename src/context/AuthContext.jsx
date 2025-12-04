@@ -75,7 +75,7 @@ export const AuthProvider = ({ children }) => {
 
       if (result.success && result.user) {
         // Sign in with Supabase Auth using the email
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        const { error: authError } = await supabase.auth.signInWithPassword({
           email: result.user.email,
           password: password
         });
@@ -85,7 +85,7 @@ export const AuthProvider = ({ children }) => {
           // Continue anyway if custom RPC succeeded
         }
 
-        // Store admin session
+        // Store admin session for AuthContext
         const adminSession = {
           adminId: result.user.id,
           username: result.user.username,
@@ -95,6 +95,17 @@ export const AuthProvider = ({ children }) => {
           loginTime: new Date().toISOString()
         };
         localStorage.setItem('adminSession', JSON.stringify(adminSession));
+
+        // Also store for AdminContext (will trigger login activity logging)
+        const adminUser = {
+          id: result.user.id,
+          username: result.user.username,
+          email: result.user.email,
+          role: result.user.role,
+          fullName: result.user.fullName
+        };
+        localStorage.setItem('adminUser', JSON.stringify(adminUser));
+
         setAdminData(adminSession);
         setIsAuthenticated(true);
         return { success: true };
@@ -111,8 +122,9 @@ export const AuthProvider = ({ children }) => {
     // Sign out from Supabase Auth
     await supabase.auth.signOut();
 
-    // Clear local storage
+    // Clear local storage (both contexts)
     localStorage.removeItem('adminSession');
+    localStorage.removeItem('adminUser');
     setAdminData(null);
     setIsAuthenticated(false);
   };

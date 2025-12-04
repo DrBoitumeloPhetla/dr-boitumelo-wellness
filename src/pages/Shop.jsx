@@ -338,14 +338,14 @@ const Shop = () => {
                     ))}
                   </ul>
 
-                  {/* View Details Button & Package Contents */}
-                  {product.package_contents && (
+                  {/* View Details Button with Composition, Uses & Usage */}
+                  {(product.package_contents || product.composition || product.uses || product.usage) && (
                     <div className="mt-3">
                       <button
                         onClick={() => toggleExpanded(product.id)}
                         className="flex items-center justify-between w-full text-sm font-semibold text-primary-green hover:text-green-dark transition-colors py-2 px-3 bg-sage/30 rounded-lg"
                       >
-                        <span>What's in the package?</span>
+                        <span>Product Details</span>
                         {expandedProducts.includes(product.id) ? (
                           <FaChevronUp className="text-xs" />
                         ) : (
@@ -362,16 +362,59 @@ const Shop = () => {
                             transition={{ duration: 0.3 }}
                             className="overflow-hidden"
                           >
-                            <div className="mt-2 p-3 bg-cream rounded-lg">
-                              <h4 className="text-xs font-semibold text-dark-text mb-2">Package Includes:</h4>
-                              <ul className="space-y-1">
-                                {product.package_contents.split('\n').filter(item => item.trim()).map((item, idx) => (
-                                  <li key={idx} className="text-xs text-gray-600 flex items-start">
-                                    <span className="text-primary-green mr-2">•</span>
-                                    {item.trim()}
-                                  </li>
-                                ))}
-                              </ul>
+                            <div className="mt-2 p-3 bg-cream rounded-lg space-y-3">
+                              {/* Composition */}
+                              {product.composition && (
+                                <div>
+                                  <h4 className="text-xs font-bold text-dark-text mb-1 flex items-center gap-1">
+                                    <span className="text-primary-green">📋</span> Composition
+                                  </h4>
+                                  <div className="text-xs text-gray-700 whitespace-pre-line">
+                                    {product.composition}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Uses */}
+                              {product.uses && (
+                                <div>
+                                  <h4 className="text-xs font-bold text-dark-text mb-1 flex items-center gap-1">
+                                    <span className="text-primary-green">💊</span> Uses & Benefits
+                                  </h4>
+                                  <div className="text-xs text-gray-700 whitespace-pre-line">
+                                    {product.uses}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Usage Instructions */}
+                              {product.usage && (
+                                <div>
+                                  <h4 className="text-xs font-bold text-dark-text mb-1 flex items-center gap-1">
+                                    <span className="text-primary-green">⏰</span> How to Use
+                                  </h4>
+                                  <div className="text-xs text-gray-700 whitespace-pre-line">
+                                    {product.usage}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Package Contents */}
+                              {product.package_contents && (
+                                <div>
+                                  <h4 className="text-xs font-bold text-dark-text mb-1 flex items-center gap-1">
+                                    <span className="text-primary-green">📦</span> Package Includes
+                                  </h4>
+                                  <ul className="space-y-1">
+                                    {product.package_contents.split('\n').filter(item => item.trim()).map((item, idx) => (
+                                      <li key={idx} className="text-xs text-gray-600 flex items-start">
+                                        <span className="text-primary-green mr-2">•</span>
+                                        {item.trim()}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
                             </div>
                           </motion.div>
                         )}

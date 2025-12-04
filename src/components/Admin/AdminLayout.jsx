@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useAdmin, AdminProvider } from '../../context/AdminContext';
 import { useNotifications } from '../../hooks/useNotifications';
 import { motion } from 'framer-motion';
 import {
@@ -18,18 +19,26 @@ import {
   FaStar,
   FaNewspaper,
   FaTag,
-  FaPrescriptionBottle
+  FaPrescriptionBottle,
+  FaHistory,
+  FaShieldAlt
 } from 'react-icons/fa';
 
-const AdminLayout = ({ children }) => {
+// Inner component that uses AdminContext
+const AdminLayoutInner = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { logout } = useAuth();
+  const { logout: authLogout, adminData } = useAuth();
+  const { logout: adminLogout, isSuperAdmin, currentAdmin } = useAdmin();
   const navigate = useNavigate();
   const location = useLocation();
   const { counts, markAsVisited, refreshCounts } = useNotifications();
 
+  // This sync is now handled in AuthContext.jsx during login
+  // No need to reload the page here
+
   const handleLogout = () => {
-    logout();
+    adminLogout(); // Log logout activity
+    authLogout();
     navigate('/admin/login');
   };
 
@@ -51,17 +60,28 @@ const AdminLayout = ({ children }) => {
     }
   }, [location.pathname]);
 
-  const menuItems = [
-    { path: '/admin/dashboard', icon: FaHome, label: 'Dashboard', notificationKey: null },
-    { path: '/admin/clients', icon: FaUsers, label: 'Supplement Buyers', notificationKey: 'clients' },
-    { path: '/admin/products', icon: FaBoxes, label: 'Products', notificationKey: null },
-    { path: '/admin/discounts', icon: FaTag, label: 'Discounts & Sales', notificationKey: null },
-    { path: '/admin/orders', icon: FaShoppingCart, label: 'Orders', notificationKey: 'orders' },
-    { path: '/admin/prescription-requests', icon: FaPrescriptionBottle, label: 'Prescription Requests', notificationKey: 'prescriptionRequests' },
-    { path: '/admin/blog', icon: FaNewspaper, label: 'Blog Articles', notificationKey: null },
-    { path: '/admin/reviews', icon: FaStar, label: 'Reviews', notificationKey: 'reviews' },
-    { path: '/admin/contacts', icon: FaEnvelope, label: 'Contact Submissions', notificationKey: 'contacts' },
+  // Role badge styling
+  const roleBadgeClass = isSuperAdmin()
+    ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
+    : 'bg-blue-100 text-blue-800 border-blue-300';
+
+  const roleName = isSuperAdmin() ? 'Super Admin' : 'Staff';
+
+  // Filter menu items based on role
+  const allMenuItems = [
+    { path: '/admin/dashboard', icon: FaHome, label: 'Dashboard', notificationKey: null, requireSuperAdmin: true },
+    { path: '/admin/clients', icon: FaUsers, label: 'Supplement Buyers', notificationKey: 'clients', requireSuperAdmin: false },
+    { path: '/admin/products', icon: FaBoxes, label: 'Products', notificationKey: null, requireSuperAdmin: false },
+    { path: '/admin/discounts', icon: FaTag, label: 'Discounts & Sales', notificationKey: null, requireSuperAdmin: false },
+    { path: '/admin/orders', icon: FaShoppingCart, label: 'Orders', notificationKey: 'orders', requireSuperAdmin: false },
+    { path: '/admin/prescription-requests', icon: FaPrescriptionBottle, label: 'Prescription Requests', notificationKey: 'prescriptionRequests', requireSuperAdmin: false },
+    { path: '/admin/blog', icon: FaNewspaper, label: 'Blog Articles', notificationKey: null, requireSuperAdmin: false },
+    { path: '/admin/reviews', icon: FaStar, label: 'Reviews', notificationKey: 'reviews', requireSuperAdmin: false },
+    { path: '/admin/contacts', icon: FaEnvelope, label: 'Contact Submissions', notificationKey: 'contacts', requireSuperAdmin: false },
+    { path: '/admin/activity-logs', icon: FaHistory, label: 'Activity Logs', notificationKey: null, requireSuperAdmin: true },
   ];
+
+  const menuItems = allMenuItems.filter(item => !item.requireSuperAdmin || isSuperAdmin());
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -91,6 +111,19 @@ const AdminLayout = ({ children }) => {
             Dr. Boitumelo
           </h1>
           <p className="text-sm text-gray-600 mt-1">Admin Panel</p>
+
+          {/* User info with role badge */}
+          {currentAdmin && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <p className="text-sm font-medium text-gray-700 mb-1.5">
+                {currentAdmin.username}
+              </p>
+              <div className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${roleBadgeClass}`}>
+                <FaShieldAlt className="text-xs" />
+                <span>{roleName}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Navigation - Scrollable */}
@@ -155,6 +188,15 @@ const AdminLayout = ({ children }) => {
         </div>
       </main>
     </div>
+  );
+};
+
+// Wrapper component that provides AdminContext
+const AdminLayout = ({ children }) => {
+  return (
+    <AdminProvider>
+      <AdminLayoutInner>{children}</AdminLayoutInner>
+    </AdminProvider>
   );
 };
 

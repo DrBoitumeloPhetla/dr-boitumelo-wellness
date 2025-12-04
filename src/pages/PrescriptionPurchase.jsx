@@ -44,21 +44,6 @@ const PrescriptionPurchase = () => {
         return;
       }
 
-      // Check if 24-hour purchase window has expired (from first visit)
-      if (data.first_visited_at) {
-        const visitTime = new Date(data.first_visited_at);
-        const now = new Date();
-        const hoursSinceVisit = (now - visitTime) / (1000 * 60 * 60);
-
-        if (hoursSinceVisit > 24) {
-          setError('Your 24-hour purchase window has expired. Please contact Dr. Boitumelo for a new link.');
-          return;
-        }
-      } else {
-        // First visit - mark the visit time (starts 24hr countdown)
-        await markPrescriptionFirstVisit(code);
-      }
-
       setRequest(data);
     } catch (err) {
       console.error('Error loading prescription request:', err);
@@ -181,46 +166,35 @@ const PrescriptionPurchase = () => {
               <p className="text-gray-700">
                 <strong>Link Expires:</strong> {new Date(request.expires_at).toLocaleDateString()} at {new Date(request.expires_at).toLocaleTimeString()}
               </p>
-              {request.first_visited_at && (
-                <p className="text-gray-700 mt-2 font-semibold text-orange-700">
-                  <strong>24-Hour Purchase Window:</strong> {' '}
-                  {(() => {
-                    const visitTime = new Date(request.first_visited_at);
-                    const expiryTime = new Date(visitTime.getTime() + 24 * 60 * 60 * 1000);
-                    const hoursLeft = Math.max(0, (expiryTime - new Date()) / (1000 * 60 * 60));
-                    return `${Math.floor(hoursLeft)} hours ${Math.floor((hoursLeft % 1) * 60)} minutes remaining`;
-                  })()}
-                </p>
-              )}
             </div>
           </div>
 
           {/* Product Details */}
-          <div className="p-8">
+          <div className="p-4 sm:p-8">
             <h3 className="text-lg font-bold text-gray-800 mb-4">Approved Product</h3>
-            <div className="flex items-center space-x-6 p-6 bg-gray-50 rounded-xl border-2 border-primary-green">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-6 space-y-4 sm:space-y-0 p-4 sm:p-6 bg-gray-50 rounded-xl border-2 border-primary-green">
               {request.products?.image_url && (
                 <img
                   src={request.products.image_url}
                   alt={request.products.name}
-                  className="w-32 h-32 object-cover rounded-lg"
+                  className="w-full sm:w-32 h-48 sm:h-32 object-cover rounded-lg"
                 />
               )}
-              <div className="flex-1">
-                <h4 className="text-2xl font-bold text-gray-800 mb-2">
+              <div className="flex-1 space-y-4">
+                <h4 className="text-xl sm:text-2xl font-bold text-gray-800">
                   {request.products?.name}
                 </h4>
-                <p className="text-gray-600 mb-4">
+                <p className="text-gray-600 text-sm sm:text-base">
                   {request.products?.description}
                 </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-3xl font-bold text-primary-green">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                  <span className="text-2xl sm:text-3xl font-bold text-primary-green">
                     R{request.products?.price}
                   </span>
                   <button
                     onClick={handleAddToCart}
                     disabled={adding}
-                    className="px-8 py-3 bg-primary-green text-white rounded-lg font-semibold hover:bg-green-dark transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-primary-green text-white rounded-lg font-semibold hover:bg-green-dark transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {adding ? (
                       <>
@@ -230,7 +204,7 @@ const PrescriptionPurchase = () => {
                     ) : (
                       <>
                         <FaShoppingCart />
-                        <span>Add to Cart & Checkout</span>
+                        <span className="text-sm sm:text-base">Add to Cart & Checkout</span>
                       </>
                     )}
                   </button>
@@ -248,7 +222,7 @@ const PrescriptionPurchase = () => {
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex items-start">
                 <span className="text-yellow-600 mr-2">•</span>
-                <span>You have 24 hours from opening this link to complete your purchase</span>
+                <span>You have 7 days from approval to complete your purchase</span>
               </li>
               <li className="flex items-start">
                 <span className="text-yellow-600 mr-2">•</span>
@@ -256,7 +230,7 @@ const PrescriptionPurchase = () => {
               </li>
               <li className="flex items-start">
                 <span className="text-yellow-600 mr-2">•</span>
-                <span>The link will expire on {new Date(request.expires_at).toLocaleDateString()} or after 24 hours, whichever comes first</span>
+                <span>The link will expire on {new Date(request.expires_at).toLocaleDateString()}</span>
               </li>
               <li className="flex items-start">
                 <span className="text-yellow-600 mr-2">•</span>

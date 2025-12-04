@@ -20,13 +20,31 @@ const AdminLogin = () => {
 
     try {
       const result = await login(username, password);
+
       if (result.success) {
-        navigate('/admin/dashboard');
+        // Get the admin data from localStorage to check role
+        const adminSession = localStorage.getItem('adminSession');
+
+        if (adminSession) {
+          const sessionData = JSON.parse(adminSession);
+
+          // Redirect based on role
+          if (sessionData.role === 'super_admin') {
+            navigate('/admin/dashboard');
+          } else {
+            // Staff users go to orders page
+            navigate('/admin/orders');
+          }
+        } else {
+          // Fallback to orders if no session data
+          navigate('/admin/orders');
+        }
       } else {
-        setError(result.error);
+        setError(result.error || 'Login failed. Please check your credentials.');
       }
     } catch (error) {
-      setError('An error occurred during login. Please try again.');
+      console.error('Login error:', error);
+      setError(error.message || 'An error occurred during login. Please try again.');
     } finally {
       setIsLoading(false);
     }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaPlus, FaEdit, FaTrash, FaToggleOn, FaToggleOff, FaTag, FaPercent, FaDollarSign, FaGift } from 'react-icons/fa';
 import AdminLayout from '../../components/Admin/AdminLayout';
+import { useAdmin } from '../../context/AdminContext';
 import {
   getAllDiscounts,
   createDiscount,
@@ -11,7 +12,9 @@ import {
   getAllProducts
 } from '../../lib/supabase';
 
-const AdminDiscounts = () => {
+// Inner component that uses AdminContext
+const AdminDiscountsContent = () => {
+  const { log, canPerform } = useAdmin();
   const [discounts, setDiscounts] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -96,9 +99,38 @@ const AdminDiscounts = () => {
 
       if (editingDiscount) {
         await updateDiscount(editingDiscount.id, discountData);
+
+        // Log the update activity
+        await log({
+          actionType: 'update',
+          resourceType: 'discount',
+          resourceId: editingDiscount.id,
+          resourceName: discountData.name,
+          details: {
+            discountType: discountData.discount_type,
+            discountValue: discountData.discount_value,
+            applyTo: discountData.apply_to,
+            changes: 'Discount details updated'
+          }
+        });
+
         alert('Discount updated successfully!');
       } else {
-        await createDiscount(discountData);
+        const newDiscount = await createDiscount(discountData);
+
+        // Log the create activity
+        await log({
+          actionType: 'create',
+          resourceType: 'discount',
+          resourceId: newDiscount.id,
+          resourceName: discountData.name,
+          details: {
+            discountType: discountData.discount_type,
+            discountValue: discountData.discount_value,
+            applyTo: discountData.apply_to
+          }
+        });
+
         alert('Discount created successfully!');
       }
 
@@ -133,10 +165,33 @@ const AdminDiscounts = () => {
   };
 
   const handleDelete = async (discountId) => {
+    // Check permissions
+    if (!canPerform('delete')) {
+      alert('You do not have permission to delete discounts. Only super admins can delete discounts.');
+      return;
+    }
+
     if (!confirm('Are you sure you want to delete this discount?')) return;
+
+    // Find discount to get its name for logging
+    const discount = discounts.find(d => d.id === discountId);
 
     try {
       await deleteDiscount(discountId);
+
+      // Log the delete activity
+      await log({
+        actionType: 'delete',
+        resourceType: 'discount',
+        resourceId: discountId,
+        resourceName: discount?.name || 'Unknown Discount',
+        details: {
+          discountType: discount?.discount_type,
+          discountValue: discount?.discount_value,
+          deletedAt: new Date().toISOString()
+        }
+      });
+
       alert('Discount deleted successfully');
       await loadData();
     } catch (error) {
@@ -188,14 +243,13 @@ const AdminDiscounts = () => {
   };
 
   return (
-    <AdminLayout>
-      <div className="p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">Discount Management</h1>
-            <p className="text-gray-600 mt-1">Create and manage sales, discounts, and promotions</p>
-          </div>
+    <div className="p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">Discount Management</h1>
+          <p className="text-gray-600 mt-1">Create and manage sales, discounts, and promotions</p>
+        </div>
           <button
             onClick={() => {
               resetForm();
@@ -592,6 +646,14 @@ const AdminDiscounts = () => {
           </div>
         )}
       </div>
+  );
+};
+
+// Wrapper component
+const AdminDiscounts = () => {
+  return (
+    <AdminLayout>
+      <AdminDiscountsContent />
     </AdminLayout>
   );
 };

@@ -34,48 +34,145 @@ const CartModal = () => {
   });
 
   const checkoutStartedSentRef = useRef(false);
+  const debounceTimerRef = useRef(null);
+
+  // Phone validation helper - South African numbers are typically 10 digits
+  const isPhoneComplete = (phone) => {
+    // Remove all non-digit characters
+    const digitsOnly = phone.replace(/\D/g, '');
+    // Check if at least 10 digits (SA standard)
+    return digitsOnly.length >= 10;
+  };
 
   // Send "Checkout Started" webhook when user fills in required fields
   // This initiates the 30-minute timer in Make.com
+  // Uses debouncing to wait until phone number is complete
   useEffect(() => {
-    const hasRequiredInfo = showCheckout && checkoutData.name && checkoutData.email && checkoutData.phone && cartItems.length > 0;
+    const hasBasicInfo = showCheckout && checkoutData.name && checkoutData.email && checkoutData.phone && cartItems.length > 0;
+    const phoneIsComplete = isPhoneComplete(checkoutData.phone);
+    const hasRequiredInfo = hasBasicInfo && phoneIsComplete;
 
-    // Send checkout started webhook once
+    // Clear any existing debounce timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+
+    // Only proceed if we have all info including complete phone number
     if (hasRequiredInfo && !checkoutStartedSentRef.current) {
-      checkoutStartedSentRef.current = true;
+      console.log('📝 All required info complete. Starting 3-second debounce timer...');
 
-      const checkoutData_toSend = {
-        customer: {
-          name: checkoutData.name,
-          email: checkoutData.email,
-          phone: checkoutData.phone
-        },
-        items: cartItems,
-        total: getGrandTotal()
-      };
+      // Wait 3 seconds after user stops typing before sending webhook
+      debounceTimerRef.current = setTimeout(() => {
+        if (checkoutStartedSentRef.current) return; // Double check
 
-      // Send "Checkout Started" event to Make.com
-      sendCheckoutStarted(checkoutData_toSend).then(result => {
-        if (result.success) {
-          console.log('✅ Checkout Started webhook sent. Session ID:', result.sessionId);
-        } else {
-          console.error('❌ Failed to send Checkout Started webhook:', result.error);
-        }
-      });
+        checkoutStartedSentRef.current = true;
 
-      // Also save to database for backup
-      saveAbandonedLead(checkoutData, 'abandoned_cart').catch(error => {
-        console.error('Failed to save abandoned lead:', error);
-      });
+        const checkoutData_toSend = {
+          customer: {
+            name: checkoutData.name,
+            email: checkoutData.email,
+            phone: checkoutData.phone
+          },
+          items: cartItems,
+          total: getGrandTotal()
+        };
+
+        // Send "Checkout Started" event to Make.com
+        console.log('⏰ Debounce timer completed. Sending webhook...');
+        sendCheckoutStarted(checkoutData_toSend).then(result => {
+          if (result.success) {
+            console.log('✅ Checkout Started webhook sent. Session ID:', result.sessionId);
+          } else {
+            console.error('❌ Failed to send Checkout Started webhook:', result.error);
+          }
+        });
+
+        // Also save to database for backup
+        saveAbandonedLead(checkoutData, 'abandoned_cart').catch(error => {
+          console.error('Failed to save abandoned lead:', error);
+        });
+      }, 3000); // 3 second delay
+    } else if (hasBasicInfo && !phoneIsComplete) {
+      console.log('⏳ Waiting for complete phone number... Current:', checkoutData.phone);
     }
 
     // Cleanup: reset flag when checkout is closed
     return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
       if (!showCheckout) {
         checkoutStartedSentRef.current = false;
       }
     };
   }, [showCheckout, checkoutData.name, checkoutData.email, checkoutData.phone, cartItems.length]);
+
+  // Exit detection: Send webhook if user tries to leave with incomplete checkout
+  useEffect(() => {
+    if (!showCheckout) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden && !checkoutStartedSentRef.current) {
+        // User is leaving the page/tab
+        const hasBasicInfo = checkoutData.name && checkoutData.email && checkoutData.phone && cartItems.length > 0;
+        const phoneIsComplete = isPhoneComplete(checkoutData.phone);
+
+        if (hasBasicInfo && phoneIsComplete) {
+          console.log('🚪 User leaving page - sending webhook immediately');
+          checkoutStartedSentRef.current = true;
+
+          const checkoutData_toSend = {
+            customer: {
+              name: checkoutData.name,
+              email: checkoutData.email,
+              phone: checkoutData.phone
+            },
+            items: cartItems,
+            total: getGrandTotal()
+          };
+
+          // Use keepalive flag to ensure webhook sends even as page closes
+          sendCheckoutStarted(checkoutData_toSend);
+          saveAbandonedLead(checkoutData, 'abandoned_cart').catch(() => {});
+        }
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      if (!checkoutStartedSentRef.current) {
+        const hasBasicInfo = checkoutData.name && checkoutData.email && checkoutData.phone && cartItems.length > 0;
+        const phoneIsComplete = isPhoneComplete(checkoutData.phone);
+
+        if (hasBasicInfo && phoneIsComplete) {
+          console.log('🚪 Page unloading - sending webhook immediately');
+          checkoutStartedSentRef.current = true;
+
+          const checkoutData_toSend = {
+            customer: {
+              name: checkoutData.name,
+              email: checkoutData.email,
+              phone: checkoutData.phone
+            },
+            items: cartItems,
+            total: getGrandTotal()
+          };
+
+          sendCheckoutStarted(checkoutData_toSend);
+          saveAbandonedLead(checkoutData, 'abandoned_cart').catch(() => {});
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [showCheckout, checkoutData, cartItems]);
 
   const handleInputChange = (e) => {
     setCheckoutData({

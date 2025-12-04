@@ -82,13 +82,20 @@ const Contact = () => {
   const contactInfo = [
     {
       icon: <FaEnvelope />,
-      title: 'Email',
+      title: 'Live Talks',
+      content: 'wellness@drphetla.co.za',
+      link: 'mailto:wellness@drphetla.co.za',
+      highlight: true,
+    },
+    {
+      icon: <FaEnvelope />,
+      title: 'General Inquiries',
       content: 'admin@drboitumelowellness.co.za',
       link: 'mailto:admin@drboitumelowellness.co.za',
     },
     {
       icon: <FaEnvelope />,
-      title: 'Email',
+      title: 'Sales & Orders',
       content: 'sales@drboitumelowellness.co.za',
       link: 'mailto:sales@drboitumelowellness.co.za',
     },

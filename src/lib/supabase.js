@@ -1349,6 +1349,175 @@ export const verifyAdminLogin = async (username, password) => {
   }
 };
 
+// ==================== ACTIVITY LOGGING ====================
+
+/**
+ * Log an admin activity for audit trail
+ * @param {Object} activityData - Activity information
+ * @param {string} activityData.adminUserId - Admin user ID
+ * @param {string} activityData.adminUsername - Admin username
+ * @param {string} activityData.actionType - Type of action (create, update, delete, approve, reject, login, logout)
+ * @param {string} activityData.resourceType - Type of resource (product, discount, order, prescription, etc.)
+ * @param {string} activityData.resourceId - ID of the affected resource
+ * @param {string} activityData.resourceName - Name/title of the affected resource
+ * @param {Object} activityData.details - Additional details (before/after values, etc.)
+ */
+export const logActivity = async (activityData) => {
+  try {
+    const { data, error } = await supabase
+      .from('activity_logs')
+      .insert([{
+        admin_user_id: activityData.adminUserId,
+        admin_username: activityData.adminUsername,
+        action_type: activityData.actionType,
+        resource_type: activityData.resourceType,
+        resource_id: activityData.resourceId,
+        resource_name: activityData.resourceName,
+        details: activityData.details || {},
+        ip_address: activityData.ipAddress || null,
+        user_agent: activityData.userAgent || navigator?.userAgent || null
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error logging activity:', error);
+      // Don't throw - logging failures shouldn't block the main action
+      return null;
+    }
+
+    console.log('✅ Activity logged:', activityData.actionType, activityData.resourceType);
+    return data;
+  } catch (error) {
+    console.error('Error in logActivity:', error);
+    // Don't throw - logging failures shouldn't block the main action
+    return null;
+  }
+};
+
+/**
+ * Get all activity logs (super admin only)
+ * @param {Object} filters - Optional filters
+ * @param {string} filters.adminUsername - Filter by admin username
+ * @param {string} filters.actionType - Filter by action type
+ * @param {string} filters.resourceType - Filter by resource type
+ * @param {string} filters.startDate - Filter by start date
+ * @param {string} filters.endDate - Filter by end date
+ * @param {number} filters.limit - Limit number of results (default 100)
+ * @param {number} filters.offset - Offset for pagination
+ */
+export const getActivityLogs = async (filters = {}) => {
+  try {
+    let query = supabase
+      .from('activity_logs_view')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    // Apply filters
+    if (filters.adminUsername) {
+      query = query.eq('admin_username', filters.adminUsername);
+    }
+    if (filters.actionType) {
+      query = query.eq('action_type', filters.actionType);
+    }
+    if (filters.resourceType) {
+      query = query.eq('resource_type', filters.resourceType);
+    }
+    if (filters.startDate) {
+      query = query.gte('created_at', filters.startDate);
+    }
+    if (filters.endDate) {
+      query = query.lte('created_at', filters.endDate);
+    }
+
+    // Apply pagination
+    const limit = filters.limit || 100;
+    const offset = filters.offset || 0;
+    query = query.range(offset, offset + limit - 1);
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error('Error fetching activity logs:', error);
+      throw error;
+    }
+
+    return {
+      logs: data || [],
+      total: count || 0
+    };
+  } catch (error) {
+    console.error('Error in getActivityLogs:', error);
+    throw error;
+  }
+};
+
+/**
+ * Check if user is super admin
+ * @param {Object} user - User object with role property
+ */
+export const isSuperAdmin = (user) => {
+  return user && user.role === 'super_admin';
+};
+
+/**
+ * Check if user is staff
+ * @param {Object} user - User object with role property
+ */
+export const isStaff = (user) => {
+  return user && user.role === 'staff';
+};
+
+/**
+ * Get activity statistics for dashboard (super admin only)
+ */
+export const getActivityStats = async () => {
+  try {
+    // Get counts for different activity types
+    const { data, error } = await supabase
+      .from('activity_logs')
+      .select('action_type, admin_username, created_at')
+      .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()); // Last 30 days
+
+    if (error) {
+      console.error('Error fetching activity stats:', error);
+      throw error;
+    }
+
+    // Process data to get statistics
+    const stats = {
+      totalActions: data.length,
+      actionsByType: {},
+      actionsByUser: {},
+      recentActivity: []
+    };
+
+    data.forEach(log => {
+      // Count by action type
+      stats.actionsByType[log.action_type] = (stats.actionsByType[log.action_type] || 0) + 1;
+
+      // Count by user
+      stats.actionsByUser[log.admin_username] = (stats.actionsByUser[log.admin_username] || 0) + 1;
+    });
+
+    // Get recent activity (last 10)
+    const { data: recent, error: recentError } = await supabase
+      .from('activity_logs_view')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (!recentError && recent) {
+      stats.recentActivity = recent;
+    }
+
+    return stats;
+  } catch (error) {
+    console.error('Error in getActivityStats:', error);
+    throw error;
+  }
+};
+
 // ==================== REVIEWS ====================
 
 /**

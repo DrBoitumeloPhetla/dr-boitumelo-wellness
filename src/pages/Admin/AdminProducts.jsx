@@ -11,6 +11,7 @@ import {
   FaTimes
 } from 'react-icons/fa';
 import AdminLayout from '../../components/Admin/AdminLayout';
+import { useAdmin } from '../../context/AdminContext';
 import {
   getAllProducts,
   createProduct,
@@ -19,7 +20,9 @@ import {
   getLowStockProducts
 } from '../../lib/supabase';
 
-const AdminProducts = () => {
+// Inner component that uses AdminContext
+const AdminProductsContent = () => {
+  const { log, canPerform } = useAdmin();
   const [products, setProducts] = useState([]);
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -146,8 +149,35 @@ const AdminProducts = () => {
     try {
       if (editingProduct) {
         await updateProduct(editingProduct.id, productData);
+
+        // Log the update activity
+        await log({
+          actionType: 'update',
+          resourceType: 'product',
+          resourceId: editingProduct.id,
+          resourceName: productData.name,
+          details: {
+            category: productData.category,
+            price: productData.price,
+            stockQuantity: productData.stock_quantity,
+            changes: 'Product details updated'
+          }
+        });
       } else {
-        await createProduct(productData);
+        const newProduct = await createProduct(productData);
+
+        // Log the create activity
+        await log({
+          actionType: 'create',
+          resourceType: 'product',
+          resourceId: newProduct.id,
+          resourceName: productData.name,
+          details: {
+            category: productData.category,
+            price: productData.price,
+            stockQuantity: productData.stock_quantity
+          }
+        });
       }
 
       setShowModal(false);
@@ -183,10 +213,33 @@ const AdminProducts = () => {
   };
 
   const handleDelete = async (productId) => {
+    // Check permissions
+    if (!canPerform('delete')) {
+      alert('You do not have permission to delete products. Only super admins can delete products.');
+      return;
+    }
+
     if (!confirm('Are you sure you want to delete this product?')) return;
+
+    // Find product to get its name for logging
+    const product = products.find(p => p.id === productId);
 
     try {
       await deleteProduct(productId);
+
+      // Log the delete activity
+      await log({
+        actionType: 'delete',
+        resourceType: 'product',
+        resourceId: productId,
+        resourceName: product?.name || 'Unknown Product',
+        details: {
+          category: product?.category,
+          price: product?.price,
+          deletedAt: new Date().toISOString()
+        }
+      });
+
       loadProducts();
       loadLowStockProducts();
     } catch (error) {
@@ -203,15 +256,14 @@ const AdminProducts = () => {
   const categories = ['all', 'supplements', 'wellness', 'skincare', 'books'];
 
   return (
-    <AdminLayout>
-      <div>
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-montserrat font-bold text-dark-text mb-2">
-            Product Management
-          </h1>
-          <p className="text-gray-600">Manage your product inventory and stock levels</p>
-        </div>
+    <div>
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-montserrat font-bold text-dark-text mb-2">
+          Product Management
+        </h1>
+        <p className="text-gray-600">Manage your product inventory and stock levels</p>
+      </div>
 
         {/* Low Stock Alert */}
         {lowStockProducts.length > 0 && (
@@ -675,6 +727,14 @@ Omega 3 (EPA & DHA)"
           )}
         </AnimatePresence>
       </div>
+  );
+};
+
+// Wrapper component
+const AdminProducts = () => {
+  return (
+    <AdminLayout>
+      <AdminProductsContent />
     </AdminLayout>
   );
 };
