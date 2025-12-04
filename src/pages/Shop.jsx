@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { FaShoppingCart, FaStar, FaHeart, FaCheck, FaExclamationTriangle, FaTag, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { FaShoppingCart, FaStar, FaHeart, FaCheck, FaExclamationTriangle, FaTag, FaChevronDown, FaChevronUp, FaPrescriptionBottle } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
 import { getActiveProducts, getActiveDiscounts } from '../lib/supabase';
+import PrescriptionRequestModal from '../components/ui/PrescriptionRequestModal';
 
 const Shop = () => {
   const [ref, inView] = useInView({
@@ -18,6 +19,8 @@ const Shop = () => {
   const [products, setProducts] = useState([]);
   const [discounts, setDiscounts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [prescriptionModalOpen, setPrescriptionModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const { addToCart } = useCart();
 
   useEffect(() => {
@@ -138,6 +141,13 @@ const Shop = () => {
   };
 
   const handleAddToCart = (product) => {
+    // Check if product requires prescription
+    if (product.requires_prescription) {
+      setSelectedProduct(product);
+      setPrescriptionModalOpen(true);
+      return;
+    }
+
     // Check if product is out of stock
     if (product.status === 'out_of_stock' || product.stock_quantity <= 0) {
       alert('This product is currently out of stock.');
@@ -239,6 +249,12 @@ const Shop = () => {
                         <FaTag className="text-xs" />
                         {priceInfo.discount.discount_type === 'percentage' && `${priceInfo.discount.discount_value}% OFF`}
                         {priceInfo.discount.discount_type === 'fixed_amount' && `R${priceInfo.discount.discount_value} OFF`}
+                      </div>
+                    )}
+                    {product.requires_prescription && (
+                      <div className="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                        <FaPrescriptionBottle className="text-xs" />
+                        PRESCRIPTION REQUIRED
                       </div>
                     )}
                     {product.featured && (
@@ -404,6 +420,8 @@ const Shop = () => {
                           ? 'bg-gray-400 text-white cursor-not-allowed'
                           : addedToCart.includes(product.id)
                           ? 'bg-green-600 text-white'
+                          : product.requires_prescription
+                          ? 'bg-blue-600 text-white hover:bg-blue-700'
                           : 'bg-primary-green text-white hover:bg-green-dark'
                       }`}
                     >
@@ -416,6 +434,11 @@ const Shop = () => {
                         <>
                           <FaCheck />
                           <span className="text-sm font-semibold">Added!</span>
+                        </>
+                      ) : product.requires_prescription ? (
+                        <>
+                          <FaPrescriptionBottle />
+                          <span className="text-sm font-semibold">Request</span>
                         </>
                       ) : (
                         <>
@@ -434,6 +457,16 @@ const Shop = () => {
           )}
         </div>
       </section>
+
+      {/* Prescription Request Modal */}
+      <PrescriptionRequestModal
+        isOpen={prescriptionModalOpen}
+        onClose={() => {
+          setPrescriptionModalOpen(false);
+          setSelectedProduct(null);
+        }}
+        product={selectedProduct}
+      />
     </div>
   );
 };
