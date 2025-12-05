@@ -14,10 +14,6 @@ const MediaSection = ({ showAllVideos = false }) => {
       title: 'Expert Medical Advice'
     },
     {
-      id: 'LedyP0jUF8I',
-      title: 'Holistic Health Approach'
-    },
-    {
       id: 'AQ1zvMFZfRg',
       title: 'Featured Talk'
     }
