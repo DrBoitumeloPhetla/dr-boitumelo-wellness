@@ -68,7 +68,7 @@ const Team = () => {
         'BTech Public Relations',
       ],
       bio: 'Leads brand strategy and marketing initiatives, ensuring Dr Boitumelo Wellness reaches and serves our community effectively.',
-      email: 'bookings@drboitumelowellness.co.za',
+      email: 'wellness@drphetla.co.za',
       phone: '',
     },
     {

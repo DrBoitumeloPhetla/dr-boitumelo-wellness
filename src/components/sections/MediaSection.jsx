@@ -16,6 +16,10 @@ const MediaSection = ({ showAllVideos = false }) => {
     {
       id: 'AQ1zvMFZfRg',
       title: 'Featured Talk'
+    },
+    {
+      id: 'Hp8dqWrULl4',
+      title: 'Featured Talk'
     }
   ];
 
