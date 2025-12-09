@@ -211,6 +211,8 @@ const Team = () => {
                         ? 'object-cover object-top'
                         : member.name === 'Potlako Moloya'
                         ? 'object-cover object-top scale-125'
+                        : member.name === 'Basetsana Motlhamme'
+                        ? 'object-cover object-top'
                         : 'object-cover'
                     }`}
                   />

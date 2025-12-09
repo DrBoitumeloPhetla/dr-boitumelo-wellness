@@ -405,14 +405,9 @@ const Shop = () => {
                                   <h4 className="text-xs font-bold text-dark-text mb-1 flex items-center gap-1">
                                     <span className="text-primary-green">📦</span> Package Includes
                                   </h4>
-                                  <ul className="space-y-1">
-                                    {product.package_contents.split('\n').filter(item => item.trim()).map((item, idx) => (
-                                      <li key={idx} className="text-xs text-gray-600 flex items-start">
-                                        <span className="text-primary-green mr-2">•</span>
-                                        {item.trim()}
-                                      </li>
-                                    ))}
-                                  </ul>
+                                  <div className="text-xs text-gray-700 whitespace-pre-line">
+                                    {product.package_contents}
+                                  </div>
                                 </div>
                               )}
                             </div>
