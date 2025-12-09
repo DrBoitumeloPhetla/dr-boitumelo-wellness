@@ -9,6 +9,10 @@
     @apply scroll-smooth;
   }
 
+  html, body {
+    @apply overflow-x-hidden;
+  }
+
   body {
     @apply font-raleway bg-white text-dark-text;
   }

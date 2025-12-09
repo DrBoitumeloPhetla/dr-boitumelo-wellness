@@ -12,7 +12,7 @@ const Hero = () => {
   return (
     <section
       id="home"
-      className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 md:pt-24"
     >
       {/* Clean Background with Subtle Pattern */}
       <div className="absolute inset-0 bg-gradient-to-br from-sage/30 via-cream to-white z-0" />
@@ -36,25 +36,25 @@ const Hero = () => {
           transition={{ duration: 0.8 }}
         >
           {/* Main Heading */}
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-montserrat font-bold mb-6 text-dark-text">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-montserrat font-bold mb-4 md:mb-6 text-dark-text">
             Fueling Your Life,
             <br />
             <span className="text-primary-green">Cell by Cell</span>
           </h1>
 
           {/* Subheading */}
-          <p className="text-2xl md:text-3xl font-raleway mb-8 text-gray-700">
+          <p className="text-xl md:text-3xl font-raleway mb-6 md:mb-8 text-gray-700">
             Science-Backed Wellness
           </p>
 
           {/* Description */}
-          <p className="text-lg md:text-xl font-raleway mb-12 max-w-3xl mx-auto text-gray-600 leading-relaxed">
+          <p className="text-lg md:text-xl font-raleway mb-8 md:mb-12 max-w-3xl mx-auto text-gray-600 leading-relaxed">
             Premium nutritional supplements designed by a medical doctor for immunity,
             gut balance, hormonal regulation, and cellular regeneration.
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-10 md:mb-16">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
