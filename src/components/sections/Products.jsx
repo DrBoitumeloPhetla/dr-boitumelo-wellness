@@ -264,6 +264,7 @@ const Products = () => {
                 </p>
 
                 {/* Benefits */}
+                {product.benefits && product.benefits.length > 0 && (
                 <ul className="space-y-1">
                   {product.benefits.slice(0, 2).map((benefit, idx) => (
                     <li
@@ -275,6 +276,7 @@ const Products = () => {
                     </li>
                   ))}
                 </ul>
+                )}
 
                 {/* View Details Button with Composition, Uses & Usage */}
                 {(product.package_contents || product.composition || product.uses || product.usage) && (

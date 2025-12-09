@@ -52,7 +52,7 @@ const Team = () => {
     {
       name: 'Potlako Moloya',
       role: 'Wellness Manager',
-      image: '/Potlako Moloya.png',
+      image: '/Potlako Moloya.jpg',
       qualifications: ['Somatology', 'Pharmaceutical Science Advanced Diploma'],
       bio: 'Manages wellness operations and ensures clients receive the highest quality care and personalized attention.',
       email: 'sales@drboitumelowellness.co.za',
@@ -61,7 +61,7 @@ const Team = () => {
     {
       name: 'Basetsana Motlhamme',
       role: 'Brand Manager',
-      image: '/Basetsana Motlhamme.png',
+      image: '/Basetsana Motlhamme.jpg',
       qualifications: [
         'Master of Business Leadership',
         'Post-Graduate Diploma Marketing Management',
@@ -209,6 +209,8 @@ const Team = () => {
                     className={`w-full h-full group-hover:scale-105 transition-transform duration-500 ${
                       member.name === 'Dr. Nontobeko Mbatha'
                         ? 'object-cover object-top'
+                        : member.name === 'Potlako Moloya'
+                        ? 'object-cover object-top scale-125'
                         : 'object-cover'
                     }`}
                   />
