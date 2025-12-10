@@ -94,6 +94,10 @@ const AdminPrescriptionRequestsContent = () => {
           // Mark webhook as sent BEFORE making the request
           webhooksSentRef.current.add(webhookKey);
 
+          // Determine which price to show (discounted if available, otherwise original)
+          const displayPrice = request.discounted_price || request.original_price || request.products?.price;
+          const hasDiscount = !!request.discounted_price;
+
           await fetch(webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -102,7 +106,11 @@ const AdminPrescriptionRequestsContent = () => {
               customerName: request.customer_name,
               customerEmail: request.customer_email,
               productName: request.products?.name,
-              productPrice: request.products?.price,
+              productPrice: displayPrice,
+              originalPrice: hasDiscount ? request.original_price : null,
+              hasDiscount: hasDiscount,
+              discountType: request.discount_type || null,
+              discountValue: request.discount_value || null,
               uniqueCode: request.unique_code,
               purchaseLink: purchaseLink,
               expiryDate: expiryDate,
@@ -343,7 +351,21 @@ const AdminPrescriptionRequestsContent = () => {
                           )}
                           <div>
                             <div className="font-semibold text-gray-900">{request.products?.name || 'Unknown Product'}</div>
-                            <div className="text-sm text-gray-500">R{request.products?.price}</div>
+                            {request.discounted_price ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-400 line-through">R{request.original_price}</span>
+                                <span className="text-sm font-bold text-red-600">R{request.discounted_price}</span>
+                                {request.discount_type && (
+                                  <span className="bg-red-100 text-red-600 text-xs px-1.5 py-0.5 rounded">
+                                    {request.discount_type === 'percentage'
+                                      ? `${request.discount_value}% OFF`
+                                      : `R${request.discount_value} OFF`}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-sm text-gray-500">R{request.original_price || request.products?.price}</div>
+                            )}
                           </div>
                         </div>
                       </td>

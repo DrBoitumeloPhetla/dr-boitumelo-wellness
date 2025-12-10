@@ -74,7 +74,7 @@ const Team = () => {
     {
       name: 'Lerato Mampuru',
       role: 'Practice Manager',
-      image: '/Lerato Mampuru.png',
+      image: '/Lerato Mampuru.jpg',
       qualifications: ['BCom Accounting Science'],
       bio: 'Manages day-to-day practice operations, ensuring smooth administrative processes and excellent patient experience.',
       email: 'admin@drboitumelowellness.co.za',
@@ -213,6 +213,8 @@ const Team = () => {
                         ? 'object-cover object-top scale-125'
                         : member.name === 'Basetsana Motlhamme'
                         ? 'object-cover object-top'
+                        : member.name === 'Lerato Mampuru'
+                        ? 'object-cover object-[center_20%]'
                         : 'object-cover'
                     }`}
                   />

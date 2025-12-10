@@ -56,8 +56,20 @@ const PrescriptionPurchase = () => {
   const handleAddToCart = async () => {
     setAdding(true);
     try {
-      // Add product to cart
-      addToCart(request.products);
+      // Add product to cart with the locked-in discount price
+      const productWithPrice = {
+        ...request.products,
+        // Use the stored discounted price if available, otherwise original price
+        price: request.discounted_price || request.original_price || request.products.price,
+        originalPrice: request.original_price || request.products.price,
+        // Include discount info for display in cart
+        discount: request.discounted_price ? {
+          discount_type: request.discount_type,
+          discount_value: request.discount_value,
+          name: request.discount_name
+        } : null
+      };
+      addToCart(productWithPrice);
 
       // Mark prescription request as used
       await markPrescriptionRequestUsed(code);
@@ -188,9 +200,27 @@ const PrescriptionPurchase = () => {
                   {request.products?.description}
                 </p>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-                  <span className="text-2xl sm:text-3xl font-bold text-primary-green">
-                    R{request.products?.price}
-                  </span>
+                  {request.discounted_price ? (
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg text-gray-400 line-through">
+                        R{request.original_price}
+                      </span>
+                      <span className="text-2xl sm:text-3xl font-bold text-red-600">
+                        R{request.discounted_price}
+                      </span>
+                      {request.discount_type && (
+                        <span className="bg-red-100 text-red-600 text-sm px-2 py-1 rounded-full font-semibold">
+                          {request.discount_type === 'percentage'
+                            ? `${request.discount_value}% OFF`
+                            : `R${request.discount_value} OFF`}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-2xl sm:text-3xl font-bold text-primary-green">
+                      R{request.original_price || request.products?.price}
+                    </span>
+                  )}
                   <button
                     onClick={handleAddToCart}
                     disabled={adding}

@@ -2147,6 +2147,11 @@ export const createPrescriptionRequest = async (requestData) => {
         customer_phone: requestData.customerPhone,
         health_info: requestData.healthInfo,
         blood_test_file_url: requestData.bloodTestFileUrl,
+        original_price: requestData.originalPrice,
+        discounted_price: requestData.discountedPrice,
+        discount_type: requestData.discountType,
+        discount_value: requestData.discountValue,
+        discount_name: requestData.discountName,
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
       }])
       .select()

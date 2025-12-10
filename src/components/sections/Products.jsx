@@ -105,15 +105,24 @@ const Products = () => {
   };
 
   const handleAddToCart = (product) => {
+    // Calculate discount info
+    const priceInfo = calculateDiscountedPrice(product);
+
     // Check if product requires prescription
     if (product.requires_prescription) {
-      setSelectedProduct(product);
+      // Pass product with discount info to modal
+      const productWithDiscount = {
+        ...product,
+        ...(priceInfo && {
+          originalPrice: priceInfo.originalPrice,
+          discountedPrice: priceInfo.discountedPrice,
+          discount: priceInfo.discount
+        })
+      };
+      setSelectedProduct(productWithDiscount);
       setPrescriptionModalOpen(true);
       return;
     }
-
-    // Calculate discount info
-    const priceInfo = calculateDiscountedPrice(product);
 
     // Add product with discount information
     const productWithDiscount = {

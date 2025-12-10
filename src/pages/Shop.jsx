@@ -141,9 +141,21 @@ const Shop = () => {
   };
 
   const handleAddToCart = (product) => {
+    // Calculate discount info first
+    const priceInfo = calculateDiscountedPrice(product);
+
     // Check if product requires prescription
     if (product.requires_prescription) {
-      setSelectedProduct(product);
+      // Pass product with discount info to modal
+      const productWithDiscount = {
+        ...product,
+        ...(priceInfo && {
+          originalPrice: priceInfo.originalPrice,
+          discountedPrice: priceInfo.discountedPrice,
+          discount: priceInfo.discount
+        })
+      };
+      setSelectedProduct(productWithDiscount);
       setPrescriptionModalOpen(true);
       return;
     }
@@ -153,8 +165,6 @@ const Shop = () => {
       alert('This product is currently out of stock.');
       return;
     }
-
-    const priceInfo = calculateDiscountedPrice(product);
     const finalPrice = priceInfo ? priceInfo.discountedPrice : parseFloat(product.price);
 
     addToCart({

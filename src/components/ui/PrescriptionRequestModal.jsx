@@ -105,14 +105,20 @@ const PrescriptionRequestModal = ({ isOpen, onClose, product }) => {
         }
       }
 
-      // Create prescription request
+      // Create prescription request with discount info
       const requestData = {
         productId: product.id,
         customerName: formData.customerName,
         customerEmail: formData.customerEmail,
         customerPhone: formData.customerPhone,
         healthInfo: formData.healthInfo,
-        bloodTestFileUrl: fileUrls.length > 0 ? JSON.stringify(fileUrls) : null
+        bloodTestFileUrl: fileUrls.length > 0 ? JSON.stringify(fileUrls) : null,
+        // Include discount info if available
+        originalPrice: product.discountedPrice ? product.originalPrice : parseFloat(product.price),
+        discountedPrice: product.discountedPrice || null,
+        discountType: product.discount?.discount_type || null,
+        discountValue: product.discount?.discount_value || null,
+        discountName: product.discount?.name || null
       };
 
       const result = await createPrescriptionRequest(requestData);
@@ -125,12 +131,22 @@ const PrescriptionRequestModal = ({ isOpen, onClose, product }) => {
       const webhookUrl = import.meta.env.VITE_MAKE_PRESCRIPTION_WEBHOOK || 'https://hook.eu2.make.com/v2qde71mrmnfm17fgvkp5dwivlg5oyyy';
       if (webhookUrl) {
         try {
+          // Determine price to show
+          const displayPrice = product.discountedPrice || parseFloat(product.price);
+          const hasDiscount = !!product.discountedPrice;
+
           await fetch(webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               type: 'prescription_request',
               productName: product.name,
+              productPrice: displayPrice,
+              originalPrice: hasDiscount ? product.originalPrice : null,
+              hasDiscount: hasDiscount,
+              discountType: product.discount?.discount_type || null,
+              discountValue: product.discount?.discount_value || null,
+              discountName: product.discount?.name || null,
               customerName: formData.customerName,
               customerEmail: formData.customerEmail,
               customerPhone: formData.customerPhone,
@@ -229,7 +245,21 @@ const PrescriptionRequestModal = ({ isOpen, onClose, product }) => {
                     )}
                     <div>
                       <h3 className="font-semibold text-lg">{product.name}</h3>
-                      <p className="text-gray-600 text-sm">Price: R{product.price}</p>
+                      {product.discountedPrice ? (
+                        <div className="flex items-center gap-2">
+                          <p className="text-gray-400 text-sm line-through">R{product.originalPrice}</p>
+                          <p className="text-red-600 font-bold text-sm">R{product.discountedPrice.toFixed(2)}</p>
+                          {product.discount && (
+                            <span className="bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded">
+                              {product.discount.discount_type === 'percentage'
+                                ? `${product.discount.discount_value}% OFF`
+                                : `R${product.discount.discount_value} OFF`}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-gray-600 text-sm">Price: R{product.price}</p>
+                      )}
                     </div>
                   </div>
 
