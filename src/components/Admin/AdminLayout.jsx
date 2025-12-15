@@ -21,7 +21,8 @@ import {
   FaTag,
   FaPrescriptionBottle,
   FaHistory,
-  FaShieldAlt
+  FaShieldAlt,
+  FaVideo
 } from 'react-icons/fa';
 
 // Inner component that uses AdminContext
@@ -75,6 +76,7 @@ const AdminLayoutInner = ({ children }) => {
     { path: '/admin/discounts', icon: FaTag, label: 'Discounts & Sales', notificationKey: null, requireSuperAdmin: false },
     { path: '/admin/orders', icon: FaShoppingCart, label: 'Orders', notificationKey: 'orders', requireSuperAdmin: false },
     { path: '/admin/prescription-requests', icon: FaPrescriptionBottle, label: 'Prescription Requests', notificationKey: 'prescriptionRequests', requireSuperAdmin: false },
+    { path: '/admin/webinar-registrations', icon: FaVideo, label: 'Webinar Registrations', notificationKey: 'webinarRegistrations', requireSuperAdmin: false },
     { path: '/admin/blog', icon: FaNewspaper, label: 'Blog Articles', notificationKey: null, requireSuperAdmin: false },
     { path: '/admin/reviews', icon: FaStar, label: 'Reviews', notificationKey: 'reviews', requireSuperAdmin: false },
     { path: '/admin/contacts', icon: FaEnvelope, label: 'Contact Submissions', notificationKey: 'contacts', requireSuperAdmin: false },

@@ -210,7 +210,7 @@ const Team = () => {
                       member.name === 'Dr. Nontobeko Mbatha'
                         ? 'object-cover object-top'
                         : member.name === 'Potlako Moloya'
-                        ? 'object-cover object-top scale-125'
+                        ? 'object-cover object-[center_15%] scale-[1.35]'
                         : member.name === 'Basetsana Motlhamme'
                         ? 'object-cover object-top'
                         : member.name === 'Lerato Mampuru'

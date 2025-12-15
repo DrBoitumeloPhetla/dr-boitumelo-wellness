@@ -2425,3 +2425,382 @@ export const subscribeToNewsletter = async (email) => {
     throw error;
   }
 };
+
+// ============================================
+// WEBINAR FUNCTIONS (Vitamin D Talks)
+// ============================================
+
+/**
+ * Get all webinars
+ */
+export const getAllWebinars = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('webinars')
+      .select('*')
+      .order('date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching webinars:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in getAllWebinars:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get upcoming webinars only
+ */
+export const getUpcomingWebinars = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('webinars')
+      .select('*')
+      .in('status', ['upcoming', 'live'])
+      .gte('date', new Date().toISOString().split('T')[0])
+      .order('date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching upcoming webinars:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in getUpcomingWebinars:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get webinar by ID
+ */
+export const getWebinarById = async (webinarId) => {
+  try {
+    const { data, error } = await supabase
+      .from('webinars')
+      .select('*')
+      .eq('id', webinarId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching webinar:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in getWebinarById:', error);
+    throw error;
+  }
+};
+
+/**
+ * Create webinar registration
+ */
+export const createWebinarRegistration = async (registrationData) => {
+  try {
+    const { data, error } = await supabase
+      .from('webinar_registrations')
+      .insert([{
+        webinar_id: registrationData.webinarId,
+        first_name: registrationData.firstName,
+        last_name: registrationData.lastName,
+        email: registrationData.email,
+        phone: registrationData.phone,
+        profession: registrationData.profession,
+        hpcsa_number: registrationData.hpcsaNumber,
+        payment_status: registrationData.paymentStatus || 'pending',
+        payment_reference: registrationData.paymentReference || null
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating webinar registration:', error);
+      throw error;
+    }
+
+    console.log('✅ Webinar registration created:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in createWebinarRegistration:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get single webinar registration by ID with webinar details
+ */
+export const getWebinarRegistrationById = async (registrationId) => {
+  try {
+    const { data, error } = await supabase
+      .from('webinar_registrations')
+      .select(`
+        *,
+        webinars (*)
+      `)
+      .eq('id', registrationId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching webinar registration:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in getWebinarRegistrationById:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update webinar registration payment status
+ */
+export const updateWebinarRegistrationPayment = async (registrationId, paymentData) => {
+  try {
+    const { data, error } = await supabase
+      .from('webinar_registrations')
+      .update({
+        payment_status: paymentData.status,
+        payment_reference: paymentData.reference,
+        payment_date: new Date().toISOString()
+      })
+      .eq('id', registrationId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating webinar registration payment:', error);
+      throw error;
+    }
+
+    console.log('✅ Webinar registration payment updated:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in updateWebinarRegistrationPayment:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get all webinar registrations (for admin)
+ */
+export const getAllWebinarRegistrations = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('webinar_registrations')
+      .select(`
+        *,
+        webinars (
+          id,
+          title,
+          topic,
+          date,
+          time,
+          price
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching webinar registrations:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in getAllWebinarRegistrations:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get registrations for a specific webinar
+ */
+export const getWebinarRegistrations = async (webinarId) => {
+  try {
+    const { data, error } = await supabase
+      .from('webinar_registrations')
+      .select('*')
+      .eq('webinar_id', webinarId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching webinar registrations:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in getWebinarRegistrations:', error);
+    throw error;
+  }
+};
+
+/**
+ * Approve webinar registration
+ */
+export const approveWebinarRegistration = async (registrationId, approvedBy) => {
+  try {
+    const { data, error } = await supabase
+      .from('webinar_registrations')
+      .update({
+        status: 'approved',
+        approved_by: approvedBy,
+        approved_at: new Date().toISOString()
+      })
+      .eq('id', registrationId)
+      .select(`
+        *,
+        webinars (
+          id,
+          title,
+          topic,
+          date,
+          time,
+          zoom_link
+        )
+      `)
+      .single();
+
+    if (error) {
+      console.error('Error approving webinar registration:', error);
+      throw error;
+    }
+
+    console.log('✅ Webinar registration approved:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in approveWebinarRegistration:', error);
+    throw error;
+  }
+};
+
+/**
+ * Reject webinar registration
+ */
+export const rejectWebinarRegistration = async (registrationId, reason) => {
+  try {
+    const { data, error } = await supabase
+      .from('webinar_registrations')
+      .update({
+        status: 'rejected',
+        rejection_reason: reason
+      })
+      .eq('id', registrationId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error rejecting webinar registration:', error);
+      throw error;
+    }
+
+    console.log('✅ Webinar registration rejected:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in rejectWebinarRegistration:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete webinar registration
+ */
+export const deleteWebinarRegistration = async (registrationId) => {
+  try {
+    const { error } = await supabase
+      .from('webinar_registrations')
+      .delete()
+      .eq('id', registrationId);
+
+    if (error) {
+      console.error('Error deleting webinar registration:', error);
+      throw error;
+    }
+
+    console.log('✅ Webinar registration deleted successfully');
+    return true;
+  } catch (error) {
+    console.error('Error in deleteWebinarRegistration:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get registration count for a webinar
+ */
+export const getWebinarRegistrationCount = async (webinarId) => {
+  try {
+    const { count, error } = await supabase
+      .from('webinar_registrations')
+      .select('*', { count: 'exact', head: true })
+      .eq('webinar_id', webinarId)
+      .in('status', ['pending', 'approved']);
+
+    if (error) {
+      console.error('Error getting registration count:', error);
+      throw error;
+    }
+
+    return count || 0;
+  } catch (error) {
+    console.error('Error in getWebinarRegistrationCount:', error);
+    return 0;
+  }
+};
+
+/**
+ * Check if email is already registered for a webinar
+ */
+export const checkExistingWebinarRegistration = async (webinarId, email) => {
+  try {
+    const { data, error } = await supabase
+      .from('webinar_registrations')
+      .select('*')
+      .eq('webinar_id', webinarId)
+      .eq('email', email)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error checking existing registration:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in checkExistingWebinarRegistration:', error);
+    return null;
+  }
+};
+
+/**
+ * Update webinar details (admin)
+ */
+export const updateWebinar = async (webinarId, updates) => {
+  try {
+    const { data, error } = await supabase
+      .from('webinars')
+      .update(updates)
+      .eq('id', webinarId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating webinar:', error);
+      throw error;
+    }
+
+    console.log('✅ Webinar updated:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in updateWebinar:', error);
+    throw error;
+  }
+};

@@ -34,8 +34,12 @@ const AdminDiscounts = lazy(() => import('./pages/Admin/AdminDiscounts'));
 const AdminContacts = lazy(() => import('./pages/Admin/AdminContacts'));
 const AdminPrescriptionRequests = lazy(() => import('./pages/Admin/AdminPrescriptionRequests'));
 const AdminActivityLogs = lazy(() => import('./pages/Admin/AdminActivityLogs'));
+const AdminWebinarRegistrations = lazy(() => import('./pages/Admin/AdminWebinarRegistrations'));
 const ProtectedRoute = lazy(() => import('./components/Admin/ProtectedRoute'));
 const PrescriptionPurchase = lazy(() => import('./pages/PrescriptionPurchase'));
+const VitaminDTalks = lazy(() => import('./pages/VitaminDTalks'));
+const WebinarPaymentSuccess = lazy(() => import('./pages/WebinarPaymentSuccess'));
+const WebinarPaymentCancel = lazy(() => import('./pages/WebinarPaymentCancel'));
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -163,6 +167,33 @@ function App() {
           </>
         } />
 
+        {/* Vitamin D Talks Route */}
+        <Route path="/vitamin-d-talks" element={
+          <>
+            <Header />
+            <VitaminDTalks />
+            <Footer />
+            <CartModal />
+            <FloatingCartButton />
+          </>
+        } />
+
+        {/* Webinar Payment Routes */}
+        <Route path="/webinar/payment/success" element={
+          <>
+            <Header />
+            <WebinarPaymentSuccess />
+            <Footer />
+          </>
+        } />
+        <Route path="/webinar/payment/cancel" element={
+          <>
+            <Header />
+            <WebinarPaymentCancel />
+            <Footer />
+          </>
+        } />
+
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={
@@ -213,6 +244,11 @@ function App() {
         <Route path="/admin/activity-logs" element={
           <ProtectedRoute>
             <AdminActivityLogs />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/webinar-registrations" element={
+          <ProtectedRoute>
+            <AdminWebinarRegistrations />
           </ProtectedRoute>
         } />
       </Routes>
