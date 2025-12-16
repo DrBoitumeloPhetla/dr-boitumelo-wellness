@@ -76,7 +76,7 @@ const VitaminDTalks = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-primary-green via-green-dark to-primary-green text-white pt-32 pb-20 px-6 mt-20 overflow-hidden">
+      <section className="relative bg-gradient-to-br from-primary-green via-green-dark to-primary-green text-white pt-32 pb-16 px-6 mt-20 overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-10 left-10 text-9xl">☀️</div>
@@ -123,12 +123,12 @@ const VitaminDTalks = () => {
       {/* About Section */}
       <section className="py-16 px-6 bg-cream">
         <div className="container-custom">
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-6xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.6 }}
-              className="grid md:grid-cols-2 gap-8 items-center"
+              className="grid md:grid-cols-3 gap-8 items-center"
               ref={ref}
             >
               <div>
@@ -149,20 +149,27 @@ const VitaminDTalks = () => {
                     <FaCheckCircle className="text-primary-green mt-1 flex-shrink-0" />
                     <span className="text-gray-700">Live Q&A with Dr. Boitumelo</span>
                   </li>
-                                  </ul>
+                </ul>
               </div>
-              <div className="bg-white p-8 rounded-2xl shadow-lg">
+              <div className="bg-white p-6 rounded-2xl shadow-lg">
                 <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-20 h-20 bg-gold/10 rounded-full mb-4">
-                    <FaGraduationCap className="text-4xl text-gold" />
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gold/10 rounded-full mb-3">
+                    <FaGraduationCap className="text-3xl text-gold" />
                   </div>
                   <h3 className="text-2xl font-bold text-dark-text mb-2">R200 per session</h3>
-                  <p className="text-gray-600 mb-4">HPCSA registered practitioners only</p>
-                  <div className="text-sm text-gray-500 bg-cream p-4 rounded-lg">
+                  <p className="text-gray-600 mb-3 text-sm">HPCSA registered practitioners only</p>
+                  <div className="text-xs text-gray-500 bg-cream p-3 rounded-lg">
                     Registration requires verification of your HPCSA number before
                     access to the webinar is granted.
                   </div>
                 </div>
+              </div>
+              <div>
+                <img
+                  src="/Dates & Topics.jpeg"
+                  alt="Vitamin D Talks 2026 Schedule"
+                  className="w-full rounded-xl shadow-lg"
+                />
               </div>
             </motion.div>
           </div>
