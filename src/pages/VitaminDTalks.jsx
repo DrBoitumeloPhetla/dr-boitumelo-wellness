@@ -137,7 +137,7 @@ const VitaminDTalks = () => {
                 </h2>
                 <p className="text-gray-700 mb-6">
                   Join Dr. Boitumelo Phetla for an in-depth exploration of Vitamin D's role
-                  across multiple medical specialties. Each monthly session covers a specific
+                  across different organ systems. Each monthly session covers a specific
                   topic with the latest research and clinical applications.
                 </p>
                 <ul className="space-y-3">
@@ -157,9 +157,9 @@ const VitaminDTalks = () => {
                     <FaGraduationCap className="text-3xl text-gold" />
                   </div>
                   <h3 className="text-2xl font-bold text-dark-text mb-2">R200 per session</h3>
-                  <p className="text-gray-600 mb-3 text-sm">HPCSA registered practitioners only</p>
+                  <p className="text-gray-600 mb-3 text-sm">HPCSA & SANC registered practitioners only</p>
                   <div className="text-xs text-gray-500 bg-cream p-3 rounded-lg">
-                    Registration requires verification of your HPCSA number before
+                    Registration requires verification of your HPCSA or SANC number before
                     access to the webinar is granted.
                   </div>
                 </div>
@@ -238,7 +238,7 @@ const VitaminDTalks = () => {
                     )}
 
                     {/* Content */}
-                    <div className="pt-20 p-6">
+                    <div className="pt-24 p-6">
                       <div className="text-4xl mb-3">{icon}</div>
                       <h3 className="text-xl font-montserrat font-bold text-dark-text mb-2">
                         {webinar.title}
