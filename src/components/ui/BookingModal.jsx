@@ -83,6 +83,16 @@ const BookingModal = ({ isOpen, onClose }) => {
       // Generate booking ID
       const booking_id = 'BOOK-' + Date.now();
 
+      // Store booking data in localStorage for retrieval after payment
+      localStorage.setItem('pendingBooking', JSON.stringify({
+        booking_id,
+        customer_name: customerName,
+        customer_email: customerEmail,
+        consultation_type: consultationType,
+        consultation_price: consultationPrice,
+        created_at: new Date().toISOString()
+      }));
+
       // Redirect to PayFast for payment
       redirectToPayFast({
         order_id: booking_id,

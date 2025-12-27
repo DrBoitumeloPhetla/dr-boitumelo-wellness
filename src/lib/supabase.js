@@ -2804,3 +2804,129 @@ export const updateWebinar = async (webinarId, updates) => {
     throw error;
   }
 };
+
+// ============================================
+// CONSULTATION APPOINTMENTS
+// ============================================
+
+/**
+ * Create a consultation appointment after payment
+ */
+export const createConsultationAppointment = async (appointmentData) => {
+  try {
+    const { data, error } = await supabase
+      .from('consultation_appointments')
+      .insert([{
+        booking_id: appointmentData.booking_id,
+        customer_name: appointmentData.customer_name,
+        customer_email: appointmentData.customer_email,
+        consultation_type: appointmentData.consultation_type,
+        consultation_price: appointmentData.consultation_price,
+        payment_status: 'paid',
+        status: 'pending_scheduling',
+        created_at: appointmentData.created_at || new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating consultation appointment:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in createConsultationAppointment:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get all consultation appointments (for admin)
+ */
+export const getAllConsultationAppointments = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('consultation_appointments')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching consultation appointments:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in getAllConsultationAppointments:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update consultation appointment status
+ */
+export const updateConsultationAppointmentStatus = async (id, status) => {
+  try {
+    const { data, error } = await supabase
+      .from('consultation_appointments')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating consultation appointment:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in updateConsultationAppointmentStatus:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete consultation appointment
+ */
+export const deleteConsultationAppointment = async (id) => {
+  try {
+    const { error } = await supabase
+      .from('consultation_appointments')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting consultation appointment:', error);
+      throw error;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in deleteConsultationAppointment:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get count of new consultation appointments (for notifications)
+ */
+export const getNewConsultationAppointmentsCount = async (lastVisited) => {
+  try {
+    const { count, error } = await supabase
+      .from('consultation_appointments')
+      .select('*', { count: 'exact', head: true })
+      .gt('created_at', lastVisited || '1970-01-01');
+
+    if (error) {
+      console.error('Error getting consultation appointments count:', error);
+      return 0;
+    }
+
+    return count || 0;
+  } catch (error) {
+    console.error('Error in getNewConsultationAppointmentsCount:', error);
+    return 0;
+  }
+};

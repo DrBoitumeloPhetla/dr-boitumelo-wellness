@@ -1,12 +1,39 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaCheckCircle, FaHome, FaCalendarAlt } from 'react-icons/fa';
+import { createConsultationAppointment } from '../lib/supabase';
 
 const BookingSuccess = () => {
   const navigate = useNavigate();
   const [calendlyBooked, setCalendlyBooked] = useState(false);
   const [showCalendly, setShowCalendly] = useState(true);
+  const appointmentSavedRef = useRef(false);
+
+  // Save appointment data to database on mount
+  useEffect(() => {
+    const saveAppointment = async () => {
+      // Prevent double-saving
+      if (appointmentSavedRef.current) return;
+
+      const pendingBooking = localStorage.getItem('pendingBooking');
+      if (pendingBooking) {
+        try {
+          appointmentSavedRef.current = true;
+          const bookingData = JSON.parse(pendingBooking);
+          await createConsultationAppointment(bookingData);
+          console.log('Consultation appointment saved:', bookingData);
+          // Clear the pending booking from localStorage
+          localStorage.removeItem('pendingBooking');
+        } catch (error) {
+          console.error('Error saving consultation appointment:', error);
+          appointmentSavedRef.current = false;
+        }
+      }
+    };
+
+    saveAppointment();
+  }, []);
 
   // Load Calendly widget script and listen for booking events
   useEffect(() => {
