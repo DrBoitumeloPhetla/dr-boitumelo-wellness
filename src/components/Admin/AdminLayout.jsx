@@ -52,6 +52,7 @@ const AdminLayoutInner = ({ children }) => {
       '/admin/clients': 'clients',
       '/admin/prescription-requests': 'prescription-requests',
       '/admin/appointments': 'appointments',
+      '/admin/webinar-registrations': 'webinar-registrations',
     };
 
     const pageName = pageMap[location.pathname];

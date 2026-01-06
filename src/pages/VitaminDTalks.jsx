@@ -156,7 +156,7 @@ const VitaminDTalks = () => {
                   <div className="inline-flex items-center justify-center w-16 h-16 bg-gold/10 rounded-full mb-3">
                     <FaGraduationCap className="text-3xl text-gold" />
                   </div>
-                  <h3 className="text-2xl font-bold text-dark-text mb-2">R200 per session</h3>
+                  <h3 className="text-2xl font-bold text-primary-green mb-2">FREE</h3>
                   <p className="text-gray-600 mb-3 text-sm">HPCSA & SANC registered practitioners only</p>
                   <div className="text-xs text-gray-500 bg-cream p-3 rounded-lg">
                     Registration requires verification of your HPCSA or SANC number before
@@ -260,7 +260,7 @@ const VitaminDTalks = () => {
 
                       <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                         <span className="text-xl font-bold text-primary-green">
-                          R{webinar.price}
+                          FREE
                         </span>
                         {upcoming ? (
                           <button
@@ -302,7 +302,7 @@ const VitaminDTalks = () => {
               <div className="bg-white rounded-xl p-6 shadow-md">
                 <h3 className="font-bold text-dark-text mb-2">How do I join the webinar?</h3>
                 <p className="text-gray-600">
-                  After your registration is approved and payment confirmed, you'll receive
+                  After your registration is approved, you'll receive
                   an email with the Zoom meeting link and calendar invite.
                 </p>
               </div>

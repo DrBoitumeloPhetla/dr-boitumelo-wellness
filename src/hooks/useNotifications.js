@@ -9,6 +9,7 @@ export const useNotifications = () => {
     clients: 0,
     prescriptionRequests: 0,
     consultations: 0,
+    webinarRegistrations: 0,
   });
 
   const getLastVisited = (page) => {
@@ -28,6 +29,7 @@ export const useNotifications = () => {
       const lastVisitedClients = getLastVisited('clients');
       const lastVisitedPrescriptions = getLastVisited('prescription-requests');
       const lastVisitedConsultations = getLastVisited('appointments');
+      const lastVisitedWebinars = getLastVisited('webinar-registrations');
 
       // Fetch new orders count
       const { count: ordersCount } = await supabase
@@ -65,6 +67,12 @@ export const useNotifications = () => {
         .select('*', { count: 'exact', head: true })
         .gt('created_at', lastVisitedConsultations);
 
+      // Fetch new webinar registrations count
+      const { count: webinarRegistrationsCount } = await supabase
+        .from('webinar_registrations')
+        .select('*', { count: 'exact', head: true })
+        .gt('created_at', lastVisitedWebinars);
+
       setCounts({
         orders: ordersCount || 0,
         contacts: contactsCount || 0,
@@ -72,6 +80,7 @@ export const useNotifications = () => {
         clients: clientsCount || 0,
         prescriptionRequests: prescriptionsCount || 0,
         consultations: consultationsCount || 0,
+        webinarRegistrations: webinarRegistrationsCount || 0,
       });
     } catch (error) {
       console.error('Error fetching notification counts:', error);

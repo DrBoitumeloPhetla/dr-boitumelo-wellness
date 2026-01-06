@@ -1,15 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaTimes, FaCalendarAlt, FaClock, FaUserMd, FaCreditCard, FaCheckCircle } from 'react-icons/fa';
+import { FaTimes, FaCalendarAlt, FaClock, FaUserMd, FaCheckCircle } from 'react-icons/fa';
 import { createWebinarRegistration, checkExistingWebinarRegistration } from '../../lib/supabase';
-
-// PayFast configuration
-const PAYFAST_MERCHANT_ID = import.meta.env.VITE_PAYFAST_MERCHANT_ID;
-const PAYFAST_MERCHANT_KEY = import.meta.env.VITE_PAYFAST_MERCHANT_KEY;
-const PAYFAST_MODE = import.meta.env.VITE_PAYFAST_MODE || 'sandbox';
-const PAYFAST_URL = PAYFAST_MODE === 'live'
-  ? 'https://www.payfast.co.za/eng/process'
-  : 'https://sandbox.payfast.co.za/eng/process';
 
 const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
   const [formData, setFormData] = useState({
@@ -22,7 +14,7 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [step, setStep] = useState(1); // 1 = form, 2 = confirm, 3 = redirecting
+  const [step, setStep] = useState(1); // 1 = form, 2 = confirm, 3 = success
 
   const handleChange = (e) => {
     setFormData({
@@ -65,7 +57,7 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
     setStep(2); // Move to confirmation step
   };
 
-  const handleConfirmAndPay = async () => {
+  const handleConfirmRegistration = async () => {
     setIsSubmitting(true);
     setError('');
 
@@ -78,7 +70,7 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
         return;
       }
 
-      // Create registration in database (pending payment)
+      // Create registration in database (free registration - marked as paid/confirmed)
       const registration = await createWebinarRegistration({
         webinarId: webinar.id,
         firstName: formData.firstName,
@@ -87,7 +79,7 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
         phone: formData.phone,
         profession: formData.profession,
         hpcsaNumber: formData.hpcsaNumber.toUpperCase().replace(/\s/g, ''),
-        paymentStatus: 'pending'
+        paymentStatus: 'paid'
       });
 
       // Trigger Make.com webhook for new registration notification
@@ -108,7 +100,7 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
               hpcsaNumber: formData.hpcsaNumber.toUpperCase(),
               webinarTitle: webinar.title,
               webinarDate: webinar.date,
-              webinarPrice: webinar.price,
+              isFree: true,
               timestamp: new Date().toISOString()
             })
           });
@@ -117,43 +109,7 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
         }
       }
 
-      setStep(3); // Show redirecting message
-
-      // Redirect to PayFast
-      const siteUrl = window.location.origin;
-      const paymentData = {
-        merchant_id: PAYFAST_MERCHANT_ID,
-        merchant_key: PAYFAST_MERCHANT_KEY,
-        name_first: formData.firstName,
-        name_last: formData.lastName,
-        email_address: formData.email,
-        m_payment_id: `WEB-${registration.id.slice(0, 8)}`,
-        amount: parseFloat(webinar.price).toFixed(2),
-        item_name: `Vitamin D Talks: ${webinar.title}`,
-        item_description: `Webinar registration for ${webinar.title} on ${new Date(webinar.date).toLocaleDateString('en-ZA')}`,
-        return_url: `${siteUrl}/webinar/payment/success?registration_id=${registration.id}`,
-        cancel_url: `${siteUrl}/webinar/payment/cancel?registration_id=${registration.id}`,
-        notify_url: `${siteUrl}/api/payfast/notify`,
-        custom_str1: registration.id,
-        custom_str2: webinar.id,
-        custom_str3: 'webinar'
-      };
-
-      // Create and submit form
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = PAYFAST_URL;
-
-      for (const [key, value] of Object.entries(paymentData)) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = key;
-        input.value = value;
-        form.appendChild(input);
-      }
-
-      document.body.appendChild(form);
-      form.submit();
+      setStep(3); // Show success message
 
     } catch (err) {
       console.error('Error creating registration:', err);
@@ -237,7 +193,7 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
                 </div>
                 <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between">
                   <span className="text-gray-600">Registration Fee:</span>
-                  <span className="text-2xl font-bold text-primary-green">R{webinar.price}</span>
+                  <span className="text-2xl font-bold text-primary-green">FREE</span>
                 </div>
               </div>
 
@@ -365,7 +321,7 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
                       type="submit"
                       className="w-full px-6 py-3 bg-primary-green text-white rounded-lg font-semibold hover:bg-green-dark transition-colors"
                     >
-                      Continue to Payment
+                      Continue
                     </button>
                   </form>
                 </>
@@ -400,9 +356,9 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
                       </div>
                     </div>
 
-                    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                    <div className="bg-green-50 border-l-4 border-green-400 p-4">
                       <p className="text-sm text-gray-700">
-                        <strong>Important:</strong> After payment, your HPCSA number will be verified.
+                        <strong>Important:</strong> Your HPCSA number will be verified.
                         Once approved, you'll receive an email with the Zoom meeting link.
                       </p>
                     </div>
@@ -422,12 +378,12 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
                         Back
                       </button>
                       <button
-                        onClick={handleConfirmAndPay}
+                        onClick={handleConfirmRegistration}
                         disabled={isSubmitting}
-                        className="flex-1 px-6 py-3 bg-gold text-white rounded-lg font-semibold hover:bg-gold-dark transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="flex-1 px-6 py-3 bg-primary-green text-white rounded-lg font-semibold hover:bg-green-dark transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                       >
-                        <FaCreditCard />
-                        {isSubmitting ? 'Processing...' : `Pay R${webinar.price}`}
+                        <FaCheckCircle />
+                        {isSubmitting ? 'Processing...' : 'Complete Registration'}
                       </button>
                     </div>
                   </div>
@@ -436,13 +392,21 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
 
               {step === 3 && (
                 <>
-                  {/* Redirecting */}
+                  {/* Success */}
                   <div className="text-center py-8">
-                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-green mb-4"></div>
-                    <h3 className="font-bold text-lg text-gray-800 mb-2">Redirecting to Payment</h3>
-                    <p className="text-gray-600">
-                      Please wait while we redirect you to PayFast...
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+                      <FaCheckCircle className="text-4xl text-primary-green" />
+                    </div>
+                    <h3 className="font-bold text-lg text-gray-800 mb-2">Registration Successful!</h3>
+                    <p className="text-gray-600 mb-4">
+                      Thank you for registering for this free webinar. Your HPCSA number will be verified and you'll receive an email with the Zoom meeting link once approved.
                     </p>
+                    <button
+                      onClick={handleClose}
+                      className="px-6 py-2 bg-primary-green text-white rounded-lg font-semibold hover:bg-green-dark transition-colors"
+                    >
+                      Close
+                    </button>
                   </div>
                 </>
               )}
