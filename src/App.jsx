@@ -7,6 +7,7 @@ import CartModal from './components/ui/CartModal';
 import LoadingScreen from './components/common/LoadingScreen';
 import FloatingCartButton from './components/common/FloatingCartButton';
 import ScrollToTop from './components/common/ScrollToTop';
+import usePageTracking from './hooks/usePageTracking';
 
 // Lazy load pages for better performance
 const Home = lazy(() => import('./pages/Home'));
@@ -44,6 +45,9 @@ const WebinarPaymentCancel = lazy(() => import('./pages/WebinarPaymentCancel'));
 
 function App() {
   const [loading, setLoading] = useState(true);
+
+  // Track page views for Google Analytics
+  usePageTracking();
 
   useEffect(() => {
     // Simulate loading time for initial assets
