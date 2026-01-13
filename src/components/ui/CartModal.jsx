@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaTimes, FaTrash, FaPlus, FaMinus, FaShoppingBag, FaCheckCircle } from 'react-icons/fa';
+import { FaTimes, FaTrash, FaPlus, FaMinus, FaShoppingBag, FaCheckCircle, FaTag } from 'react-icons/fa';
 import { useCart } from '../../context/CartContext';
-import { createOrder, saveAbandonedLead } from '../../lib/supabase';
+import { createOrder, saveAbandonedLead, getAffiliateByCode } from '../../lib/supabase';
 import { sendAbandonedCartToMake, sendCheckoutStarted, sendPurchaseCompleted } from '../../lib/makeWebhooks';
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '../../lib/emailService';
 import { redirectToPayFast } from '../../lib/payfast';
@@ -32,6 +32,14 @@ const CartModal = () => {
     postalCode: '',
     notes: '',
   });
+
+  // Coupon code state
+  const [couponCode, setCouponCode] = useState('');
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponError, setCouponError] = useState('');
+  const [couponSuccess, setCouponSuccess] = useState('');
+  const [appliedAffiliate, setAppliedAffiliate] = useState(null);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
   const checkoutStartedSentRef = useRef(false);
   const debounceTimerRef = useRef(null);
@@ -187,9 +195,54 @@ const CartModal = () => {
     return cartItems.length > 0 ? 168 : 0;
   };
 
-  // Calculate grand total (cart total + shipping)
+  // Calculate grand total (cart total + shipping - coupon discount)
   const getGrandTotal = () => {
-    return getCartTotal() + getShippingTotal();
+    return getCartTotal() + getShippingTotal() - couponDiscount;
+  };
+
+  // Handle applying coupon code
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError('Please enter a coupon code');
+      return;
+    }
+
+    setIsApplyingCoupon(true);
+    setCouponError('');
+    setCouponSuccess('');
+
+    try {
+      const affiliate = await getAffiliateByCode(couponCode.trim());
+
+      if (affiliate) {
+        const discount = getCartTotal() * (affiliate.discount_percentage / 100);
+        setCouponDiscount(discount);
+        setAppliedAffiliate(affiliate);
+        setCouponSuccess(`${affiliate.discount_percentage}% discount applied!`);
+        setCouponError('');
+      } else {
+        setCouponError('Invalid or expired coupon code');
+        setCouponDiscount(0);
+        setAppliedAffiliate(null);
+        setCouponSuccess('');
+      }
+    } catch (error) {
+      console.error('Error applying coupon:', error);
+      setCouponError('Error validating coupon. Please try again.');
+      setCouponDiscount(0);
+      setAppliedAffiliate(null);
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
+
+  // Remove applied coupon
+  const handleRemoveCoupon = () => {
+    setCouponCode('');
+    setCouponDiscount(0);
+    setCouponError('');
+    setCouponSuccess('');
+    setAppliedAffiliate(null);
   };
 
   const handleCheckout = async (e) => {
@@ -211,6 +264,9 @@ const CartModal = () => {
       items: cartItems,
       subtotal: getCartTotal(),
       shipping: getShippingTotal(),
+      discountAmount: couponDiscount,
+      couponCode: appliedAffiliate?.coupon_code || null,
+      affiliateId: appliedAffiliate?.id || null,
       total: getGrandTotal(),
       status: 'pending',
       orderDate: new Date().toISOString()
@@ -254,6 +310,12 @@ const CartModal = () => {
       postalCode: '',
       notes: '',
     });
+    // Reset coupon state
+    setCouponCode('');
+    setCouponDiscount(0);
+    setCouponError('');
+    setCouponSuccess('');
+    setAppliedAffiliate(null);
   };
 
   if (!isCartOpen) return null;
@@ -587,6 +649,12 @@ const CartModal = () => {
                       <span>Subtotal:</span>
                       <span>R{getCartTotal().toFixed(2)}</span>
                     </div>
+                    {couponDiscount > 0 && (
+                      <div className="flex justify-between items-center text-sm text-green-600">
+                        <span>Discount ({appliedAffiliate?.coupon_code}):</span>
+                        <span>-R{couponDiscount.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center text-sm">
                       <span>Shipping:</span>
                       <span>{getShippingTotal() === 0 ? 'FREE' : `R${getShippingTotal().toFixed(2)}`}</span>
@@ -618,11 +686,62 @@ const CartModal = () => {
           {/* Footer - Only show if not in checkout, not complete, and cart has items */}
           {!showCheckout && !orderComplete && cartItems.length > 0 && (
             <div className="border-t border-gray-200 p-6 bg-white">
+              {/* Coupon Code Section */}
+              <div className="mb-4 pb-4 border-b border-gray-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <FaTag className="text-primary-green" />
+                  <span className="font-medium text-sm">Have a coupon code?</span>
+                </div>
+                {appliedAffiliate ? (
+                  <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div>
+                      <span className="text-green-700 font-medium">{appliedAffiliate.coupon_code}</span>
+                      <span className="text-green-600 text-sm ml-2">({appliedAffiliate.discount_percentage}% off)</span>
+                    </div>
+                    <button
+                      onClick={handleRemoveCoupon}
+                      className="text-red-500 hover:text-red-700 text-sm font-medium"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      placeholder="Enter code"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-primary-green focus:ring-1 focus:ring-primary-green outline-none uppercase"
+                    />
+                    <button
+                      onClick={handleApplyCoupon}
+                      disabled={isApplyingCoupon}
+                      className="px-4 py-2 bg-primary-green text-white rounded-lg text-sm font-medium hover:bg-opacity-90 disabled:opacity-50"
+                    >
+                      {isApplyingCoupon ? '...' : 'Apply'}
+                    </button>
+                  </div>
+                )}
+                {couponError && (
+                  <p className="text-red-500 text-xs mt-1">{couponError}</p>
+                )}
+                {couponSuccess && (
+                  <p className="text-green-600 text-xs mt-1">{couponSuccess}</p>
+                )}
+              </div>
+
               <div className="space-y-2 mb-4">
                 <div className="flex items-center justify-between text-sm">
                   <span>Subtotal:</span>
                   <span>R{getCartTotal().toFixed(2)}</span>
                 </div>
+                {couponDiscount > 0 && (
+                  <div className="flex items-center justify-between text-sm text-green-600">
+                    <span>Discount ({appliedAffiliate?.discount_percentage}%):</span>
+                    <span>-R{couponDiscount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-sm">
                   <span>Shipping:</span>
                   <span>{getShippingTotal() === 0 ? 'FREE' : `R${getShippingTotal().toFixed(2)}`}</span>

@@ -145,29 +145,60 @@ export const createOrder = async (orderData) => {
     notes: orderData.customer.notes
   }, 'order');
 
-  // Then create the order
+  // Build the order insert object
+  const orderInsert = {
+    order_id: orderData.id,
+    customer_name: orderData.customer.name,
+    customer_email: orderData.customer.email,
+    customer_phone: orderData.customer.phone,
+    customer_address: orderData.customer.address,
+    customer_city: orderData.customer.city,
+    customer_postal_code: orderData.customer.postalCode,
+    customer_notes: orderData.customer.notes,
+    items: orderData.items,
+    total: orderData.total,
+    status: orderData.status,
+    order_date: orderData.orderDate
+  };
+
+  // Add affiliate/coupon fields if present
+  if (orderData.couponCode) {
+    orderInsert.coupon_code = orderData.couponCode;
+  }
+  if (orderData.discountAmount !== undefined && orderData.discountAmount > 0) {
+    orderInsert.discount_amount = orderData.discountAmount;
+  }
+  if (orderData.affiliateId) {
+    orderInsert.affiliate_id = orderData.affiliateId;
+  }
+  if (orderData.subtotal !== undefined) {
+    orderInsert.subtotal = orderData.subtotal;
+  }
+  if (orderData.shipping !== undefined) {
+    orderInsert.shipping = orderData.shipping;
+  }
+
+  // Create the order
   const { data, error } = await supabase
     .from('orders')
-    .insert([{
-      order_id: orderData.id,
-      customer_name: orderData.customer.name,
-      customer_email: orderData.customer.email,
-      customer_phone: orderData.customer.phone,
-      customer_address: orderData.customer.address,
-      customer_city: orderData.customer.city,
-      customer_postal_code: orderData.customer.postalCode,
-      customer_notes: orderData.customer.notes,
-      items: orderData.items,
-      total: orderData.total,
-      status: orderData.status,
-      order_date: orderData.orderDate
-    }])
+    .insert([orderInsert])
     .select();
 
   if (error) {
     console.error('Error creating order:', error);
     throw error;
   }
+
+  // Update affiliate stats if an affiliate was associated with this order
+  if (orderData.affiliateId && orderData.subtotal > 0) {
+    try {
+      await updateAffiliateStats(orderData.affiliateId, orderData.subtotal);
+    } catch (statsError) {
+      console.error('Error updating affiliate stats:', statsError);
+      // Don't throw - order was created successfully, stats update is secondary
+    }
+  }
+
   return data[0];
 };
 
@@ -2928,5 +2959,249 @@ export const getNewConsultationAppointmentsCount = async (lastVisited) => {
   } catch (error) {
     console.error('Error in getNewConsultationAppointmentsCount:', error);
     return 0;
+  }
+};
+
+// ============================================
+// AFFILIATE SYSTEM FUNCTIONS
+// ============================================
+
+/**
+ * Get all affiliates
+ */
+export const getAllAffiliates = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('affiliates')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching affiliates:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getAllAffiliates:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get next affiliate coupon code (DRBOIT001, DRBOIT002, etc.)
+ */
+export const getNextAffiliateCode = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('affiliates')
+      .select('coupon_code')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('Error getting last affiliate code:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      return 'DRBOIT001';
+    }
+
+    // Extract number from last code (e.g., DRBOIT005 -> 5)
+    const lastCode = data[0].coupon_code;
+    const lastNumber = parseInt(lastCode.replace('DRBOIT', ''), 10) || 0;
+    const nextNumber = lastNumber + 1;
+
+    // Pad to 3 digits
+    return `DRBOIT${nextNumber.toString().padStart(3, '0')}`;
+  } catch (error) {
+    console.error('Error in getNextAffiliateCode:', error);
+    return 'DRBOIT001';
+  }
+};
+
+/**
+ * Create a new affiliate
+ */
+export const createAffiliate = async (affiliateData) => {
+  try {
+    // Get next coupon code
+    const couponCode = await getNextAffiliateCode();
+
+    const { data, error } = await supabase
+      .from('affiliates')
+      .insert([{
+        name: affiliateData.name,
+        email: affiliateData.email,
+        phone: affiliateData.phone || null,
+        coupon_code: couponCode,
+        discount_percentage: 10.00,
+        commission_percentage: 10.00,
+        is_active: true,
+        total_sales: 0,
+        total_orders: 0,
+        total_commission: 0,
+        notes: affiliateData.notes || null
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating affiliate:', error);
+      throw error;
+    }
+
+    console.log('✅ Affiliate created:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in createAffiliate:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update an affiliate
+ */
+export const updateAffiliate = async (affiliateId, updates) => {
+  try {
+    const { data, error } = await supabase
+      .from('affiliates')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', affiliateId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating affiliate:', error);
+      throw error;
+    }
+
+    console.log('✅ Affiliate updated:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in updateAffiliate:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete an affiliate
+ */
+export const deleteAffiliate = async (affiliateId) => {
+  try {
+    const { error } = await supabase
+      .from('affiliates')
+      .delete()
+      .eq('id', affiliateId);
+
+    if (error) {
+      console.error('Error deleting affiliate:', error);
+      throw error;
+    }
+
+    console.log('✅ Affiliate deleted');
+    return true;
+  } catch (error) {
+    console.error('Error in deleteAffiliate:', error);
+    throw error;
+  }
+};
+
+/**
+ * Toggle affiliate active status
+ */
+export const toggleAffiliateStatus = async (affiliateId, isActive) => {
+  try {
+    const { data, error } = await supabase
+      .from('affiliates')
+      .update({
+        is_active: isActive,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', affiliateId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error toggling affiliate status:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in toggleAffiliateStatus:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get affiliate by coupon code (for checkout validation)
+ */
+export const getAffiliateByCode = async (couponCode) => {
+  try {
+    const { data, error } = await supabase
+      .from('affiliates')
+      .select('*')
+      .eq('coupon_code', couponCode.toUpperCase())
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching affiliate by code:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in getAffiliateByCode:', error);
+    return null;
+  }
+};
+
+/**
+ * Update affiliate stats after an order is placed
+ */
+export const updateAffiliateStats = async (affiliateId, orderSubtotal, commissionRate = 10) => {
+  try {
+    // First get current stats
+    const { data: affiliate, error: fetchError } = await supabase
+      .from('affiliates')
+      .select('total_sales, total_orders, total_commission')
+      .eq('id', affiliateId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching affiliate stats:', fetchError);
+      throw fetchError;
+    }
+
+    const commission = orderSubtotal * (commissionRate / 100);
+
+    const { data, error } = await supabase
+      .from('affiliates')
+      .update({
+        total_sales: (parseFloat(affiliate.total_sales) || 0) + parseFloat(orderSubtotal),
+        total_orders: (affiliate.total_orders || 0) + 1,
+        total_commission: (parseFloat(affiliate.total_commission) || 0) + commission,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', affiliateId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating affiliate stats:', error);
+      throw error;
+    }
+
+    console.log('✅ Affiliate stats updated:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in updateAffiliateStats:', error);
+    throw error;
   }
 };
