@@ -16,7 +16,7 @@ const BookingModal = ({ isOpen, onClose }) => {
   const [sessionId] = useState(() => 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9));
 
   // Practice address
-  const practiceAddress = "Garsfontein, Pretoria East";
+  const practiceAddress = "908 St Bernards Drive, Garsfontein, Pretoria East";
 
   // Reset state when modal closes
   useEffect(() => {

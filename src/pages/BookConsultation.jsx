@@ -74,7 +74,7 @@ const BookConsultation = () => {
         'Access to in-practice resources',
       ],
       bestFor: 'Ideal for new clients and comprehensive wellness assessments',
-      location: 'Garsfontein, Pretoria East',
+      location: '908 St Bernards Drive, Garsfontein, Pretoria East',
     },
   ];
 

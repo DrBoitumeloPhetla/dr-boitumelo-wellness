@@ -37,7 +37,7 @@ const CreateAppointmentModal = ({ onClose, onCreate }) => {
       ...prev,
       consultationType: type,
       price: typeInfo?.price || '',
-      location: type === 'face_to_face' ? 'Pretoria East, Garsfontein' : ''
+      location: type === 'face_to_face' ? '908 St Bernards Drive, Garsfontein, Pretoria East' : ''
     }));
   };
 
