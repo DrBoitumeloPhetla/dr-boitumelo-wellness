@@ -24,8 +24,8 @@ const Header = () => {
     { name: 'Home', href: '/', type: 'route' },
     { name: 'About', href: '/about', type: 'route' },
     { name: 'Shop', href: '/shop', type: 'route' },
-    { name: 'Services', href: '/services', type: 'route' },
-    { name: 'Vitamin D Talks', href: '/vitamin-d-talks', type: 'route' },
+    { name: 'Book Now', href: '/book-consultation', type: 'route' },
+    { name: 'Webinars', href: '/vitamin-d-talks', type: 'route' },
     { name: 'Team', href: '/team', type: 'route' },
     { name: 'Reviews', href: '/testimonials', type: 'route' },
     { name: 'Contact', href: '/contact', type: 'route' },
@@ -72,7 +72,7 @@ const Header = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="flex items-center space-x-3"
+            className="flex items-center space-x-3 mr-6"
           >
             <img
               src="/Logo.png"
@@ -82,7 +82,7 @@ const Header = () => {
           </motion.div>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-8">
+          <div className="hidden lg:flex items-center space-x-6">
             {navLinks.map((link, index) => (
               <motion.button
                 key={link.name}

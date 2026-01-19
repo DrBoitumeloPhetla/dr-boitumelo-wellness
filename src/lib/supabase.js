@@ -508,18 +508,35 @@ export const getCalendarSettings = async () => {
   const { data, error } = await supabase
     .from('calendar_settings')
     .select('*')
+    .eq('id', 1)
     .single();
 
   if (error) {
     console.error('Error fetching calendar settings:', error);
-    throw error;
+    // Return defaults if no settings exist
+    return {
+      workingHours: {
+        monday: { enabled: true, start: '09:00', end: '17:00' },
+        tuesday: { enabled: true, start: '09:00', end: '17:00' },
+        wednesday: { enabled: true, start: '09:00', end: '17:00' },
+        thursday: { enabled: true, start: '09:00', end: '17:00' },
+        friday: { enabled: true, start: '09:00', end: '17:00' },
+        saturday: { enabled: false, start: '09:00', end: '13:00' },
+        sunday: { enabled: false, start: '09:00', end: '13:00' }
+      },
+      blockedDates: [],
+      timeSlotDuration: 30,
+      breakTimes: [{ start: '13:00', end: '14:00', label: 'Lunch Break' }],
+      blockedTimeSlots: []
+    };
   }
 
   return {
     workingHours: data.working_hours,
-    blockedDates: data.blocked_dates,
-    timeSlotDuration: data.time_slot_duration,
-    breakTimes: data.break_times
+    blockedDates: data.blocked_dates || [],
+    timeSlotDuration: data.time_slot_duration || 30,
+    breakTimes: data.break_times || [],
+    blockedTimeSlots: data.blocked_time_slots || []
   };
 };
 
@@ -530,9 +547,11 @@ export const updateCalendarSettings = async (settings) => {
       working_hours: settings.workingHours,
       blocked_dates: settings.blockedDates,
       time_slot_duration: settings.timeSlotDuration,
-      break_times: settings.breakTimes
+      break_times: settings.breakTimes,
+      blocked_time_slots: settings.blockedTimeSlots || [],
+      updated_at: new Date().toISOString()
     })
-    .eq('id', (await supabase.from('calendar_settings').select('id').single()).data.id)
+    .eq('id', 1)
     .select();
 
   if (error) {
@@ -3202,6 +3221,495 @@ export const updateAffiliateStats = async (affiliateId, orderSubtotal, commissio
     return data;
   } catch (error) {
     console.error('Error in updateAffiliateStats:', error);
+    throw error;
+  }
+};
+
+// ============================================
+// UNIFIED APPOINTMENT SYSTEM (NEW)
+// ============================================
+
+/**
+ * Get available time slots for a specific date
+ * Considers: working hours, breaks, existing appointments, and temporary reservations
+ */
+export const getAvailableSlots = async (dateStr) => {
+  try {
+    // 1. Get calendar settings
+    const settings = await getCalendarSettings();
+
+    // 2. Determine the day of week
+    const date = new Date(dateStr);
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = dayNames[date.getDay()];
+
+    // 3. Check if this day is enabled
+    const daySettings = settings.workingHours[dayName];
+    if (!daySettings || !daySettings.enabled) {
+      return []; // Day is not a working day
+    }
+
+    // 4. Check if date is blocked
+    const blockedDates = settings.blockedDates || [];
+    const isBlocked = blockedDates.some(bd => bd.date === dateStr);
+    if (isBlocked) {
+      return []; // Date is blocked
+    }
+
+    // 5. Generate all possible slots for the day (30-minute intervals)
+    const slots = [];
+    const slotDuration = 30; // Fixed 30-minute slots
+
+    const [startHour, startMin] = daySettings.start.split(':').map(Number);
+    const [endHour, endMin] = daySettings.end.split(':').map(Number);
+
+    let currentHour = startHour;
+    let currentMin = startMin;
+
+    while (currentHour < endHour || (currentHour === endHour && currentMin < endMin)) {
+      const slotStart = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`;
+
+      // Calculate end time
+      let endSlotMin = currentMin + slotDuration;
+      let endSlotHour = currentHour;
+      if (endSlotMin >= 60) {
+        endSlotHour += 1;
+        endSlotMin -= 60;
+      }
+
+      // Don't add slot if it would end after working hours
+      if (endSlotHour > endHour || (endSlotHour === endHour && endSlotMin > endMin)) {
+        break;
+      }
+
+      const slotEnd = `${String(endSlotHour).padStart(2, '0')}:${String(endSlotMin).padStart(2, '0')}`;
+
+      slots.push({ start: slotStart, end: slotEnd });
+
+      // Move to next slot
+      currentMin += slotDuration;
+      if (currentMin >= 60) {
+        currentHour += 1;
+        currentMin -= 60;
+      }
+    }
+
+    // 6. Remove slots that overlap with break times
+    const breakTimes = settings.breakTimes || [];
+    const slotsAfterBreaks = slots.filter(slot => {
+      return !breakTimes.some(br => {
+        // Check if slot overlaps with break
+        return slot.start < br.end && slot.end > br.start;
+      });
+    });
+
+    // 7. Remove slots that overlap with blocked time slots for this date
+    const blockedTimeSlots = (settings.blockedTimeSlots || []).filter(bts => {
+      // Handle ISO date format (2026-01-24T00:00:00.000Z) vs simple date (2026-01-24)
+      const btsDateStr = bts.date ? bts.date.split('T')[0] : bts.date;
+      return btsDateStr === dateStr;
+    });
+
+    console.log('Blocked time slots for', dateStr, ':', blockedTimeSlots);
+    console.log('Slots before blocking:', slotsAfterBreaks.length);
+
+    const slotsAfterBlocked = slotsAfterBreaks.filter(slot => {
+      return !blockedTimeSlots.some(bts => {
+        return slot.start < bts.endTime && slot.end > bts.startTime;
+      });
+    });
+
+    console.log('Slots after blocking:', slotsAfterBlocked.length);
+
+    // 8. Get existing appointments for this date
+    const { data: existingAppointments, error: apptError } = await supabase
+      .from('appointments')
+      .select('start_time, end_time')
+      .eq('appointment_date', dateStr)
+      .neq('appointment_status', 'cancelled');
+
+    if (apptError) {
+      console.error('Error fetching appointments:', apptError);
+    }
+
+    // 9. Get active reservations for this date (not expired)
+    const { data: activeReservations, error: resError } = await supabase
+      .from('slot_reservations')
+      .select('start_time, end_time')
+      .eq('reservation_date', dateStr)
+      .gt('expires_at', new Date().toISOString());
+
+    if (resError) {
+      console.error('Error fetching reservations:', resError);
+    }
+
+    // 10. Remove slots that are already booked or reserved
+    const bookedSlots = [
+      ...(existingAppointments || []).map(a => ({ start: a.start_time, end: a.end_time })),
+      ...(activeReservations || []).map(r => ({ start: r.start_time, end: r.end_time }))
+    ];
+
+    const availableSlots = slotsAfterBlocked.filter(slot => {
+      return !bookedSlots.some(booked => {
+        // Compare time strings directly (HH:MM format)
+        const bookedStart = booked.start.substring(0, 5);
+        const bookedEnd = booked.end.substring(0, 5);
+        return slot.start < bookedEnd && slot.end > bookedStart;
+      });
+    });
+
+    // 11. If date is today, remove past slots
+    const today = new Date();
+    const isToday = dateStr === today.toISOString().split('T')[0];
+
+    if (isToday) {
+      const currentTime = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
+      return availableSlots.filter(slot => slot.start > currentTime);
+    }
+
+    return availableSlots;
+  } catch (error) {
+    console.error('Error in getAvailableSlots:', error);
+    throw error;
+  }
+};
+
+/**
+ * Reserve a time slot temporarily (10-minute hold)
+ */
+export const reserveTimeSlot = async (dateStr, startTime, endTime, sessionId) => {
+  try {
+    // First, clean up expired reservations
+    try {
+      await supabase
+        .from('slot_reservations')
+        .delete()
+        .lt('expires_at', new Date().toISOString());
+    } catch (cleanupErr) {
+      console.log('Cleanup skipped:', cleanupErr.message);
+    }
+
+    // Check if slot is still available
+    const { data: existing, error: checkError } = await supabase
+      .from('slot_reservations')
+      .select('id')
+      .eq('reservation_date', dateStr)
+      .eq('start_time', startTime)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+
+    if (existing) {
+      console.log('Slot already reserved');
+      return null;
+    }
+
+    // Also check appointments table
+    const { data: existingAppt } = await supabase
+      .from('appointments')
+      .select('id')
+      .eq('appointment_date', dateStr)
+      .eq('start_time', startTime)
+      .neq('appointment_status', 'cancelled')
+      .maybeSingle();
+
+    if (existingAppt) {
+      console.log('Slot already booked');
+      return null;
+    }
+
+    // Create reservation (expires in 10 minutes)
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    const { data, error } = await supabase
+      .from('slot_reservations')
+      .insert({
+        reservation_date: dateStr,
+        start_time: startTime,
+        end_time: endTime,
+        session_id: sessionId,
+        expires_at: expiresAt
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating reservation:', error);
+      throw error;
+    }
+
+    console.log('✅ Time slot reserved until:', expiresAt);
+    return data;
+  } catch (error) {
+    console.error('Error in reserveTimeSlot:', error);
+    throw error;
+  }
+};
+
+/**
+ * Cancel a time slot reservation
+ */
+export const cancelReservation = async (reservationId) => {
+  try {
+    const { error } = await supabase
+      .from('slot_reservations')
+      .delete()
+      .eq('id', reservationId);
+
+    if (error) {
+      console.error('Error canceling reservation:', error);
+      throw error;
+    }
+
+    console.log('✅ Reservation cancelled');
+    return true;
+  } catch (error) {
+    console.error('Error in cancelReservation:', error);
+    throw error;
+  }
+};
+
+/**
+ * Create a new consultation appointment (after payment success)
+ */
+export const createConsultationBooking = async (appointmentData) => {
+  try {
+    const { data, error } = await supabase
+      .from('appointments')
+      .insert({
+        booking_id: appointmentData.bookingId,
+        customer_name: appointmentData.customerName,
+        customer_email: appointmentData.customerEmail,
+        customer_phone: appointmentData.customerPhone || null,
+        consultation_type: appointmentData.consultationType,
+        appointment_date: appointmentData.appointmentDate,
+        start_time: appointmentData.startTime,
+        end_time: appointmentData.endTime,
+        price: appointmentData.price,
+        payment_status: appointmentData.paymentStatus || 'paid',
+        appointment_status: 'scheduled',
+        location: appointmentData.location || null,
+        notes: appointmentData.notes || null
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating appointment:', error);
+      throw error;
+    }
+
+    // Delete the reservation if it exists
+    if (appointmentData.reservationId) {
+      await cancelReservation(appointmentData.reservationId);
+    }
+
+    console.log('✅ Appointment created:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in createConsultationBooking:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get all consultation bookings (for admin) - new unified system
+ */
+export const getAllConsultationBookings = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('*')
+      .order('appointment_date', { ascending: true })
+      .order('start_time', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching appointments:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getAllConsultationBookings:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update consultation booking status
+ */
+export const updateConsultationBookingStatus = async (appointmentId, status) => {
+  try {
+    const { data, error } = await supabase
+      .from('appointments')
+      .update({
+        appointment_status: status,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', appointmentId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating appointment status:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in updateConsultationBookingStatus:', error);
+    throw error;
+  }
+};
+
+/**
+ * Cancel a consultation booking
+ */
+export const cancelConsultationBooking = async (appointmentId) => {
+  return updateConsultationBookingStatus(appointmentId, 'cancelled');
+};
+
+/**
+ * Reschedule a consultation booking to a new date/time
+ */
+export const rescheduleConsultationBooking = async (appointmentId, newDate, newStartTime, newEndTime) => {
+  try {
+    const { data, error } = await supabase
+      .from('appointments')
+      .update({
+        appointment_date: newDate,
+        start_time: newStartTime,
+        end_time: newEndTime,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', appointmentId)
+      .select();
+
+    if (error) {
+      console.error('Error rescheduling appointment:', error);
+      throw error;
+    }
+
+    return data?.[0];
+  } catch (error) {
+    console.error('Error in rescheduleConsultationBooking:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get consultation bookings for a specific date (for calendar view)
+ */
+export const getConsultationBookingsByDate = async (dateStr) => {
+  try {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('*')
+      .eq('appointment_date', dateStr)
+      .neq('appointment_status', 'cancelled')
+      .order('start_time', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching appointments by date:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getConsultationBookingsByDate:', error);
+    throw error;
+  }
+};
+
+/**
+ * Trigger Make.com webhook for appointment automations
+ * Uses a single webhook URL - use Router module in Make.com to branch by event_type
+ * @param {string} webhookType - 'no_show', 'completed', 'rescheduled', 'created'
+ * @param {object} appointmentData - The appointment data to send
+ */
+export const triggerMakeWebhook = async (webhookType, appointmentData) => {
+  // Single Make.com webhook URL - use Router in Make.com to filter by event_type
+  const webhookUrl = import.meta.env.VITE_MAKE_WEBHOOK_APPOINTMENTS;
+
+  if (!webhookUrl) {
+    console.log('No Make.com webhook URL configured (VITE_MAKE_WEBHOOK_APPOINTMENTS)');
+    return null;
+  }
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        event_type: webhookType,
+        timestamp: new Date().toISOString(),
+        appointment: {
+          id: appointmentData.id,
+          customer_name: appointmentData.customer_name,
+          customer_email: appointmentData.customer_email,
+          customer_phone: appointmentData.customer_phone,
+          consultation_type: appointmentData.consultation_type,
+          appointment_date: appointmentData.appointment_date,
+          start_time: appointmentData.start_time,
+          end_time: appointmentData.end_time,
+          price: appointmentData.price,
+          location: appointmentData.location,
+          status: appointmentData.appointment_status,
+          // For rescheduled events, include old date/time
+          previous_date: appointmentData.previous_date,
+          previous_start_time: appointmentData.previous_start_time,
+          previous_end_time: appointmentData.previous_end_time
+        }
+      })
+    });
+
+    if (!response.ok) {
+      console.error(`Webhook ${webhookType} failed:`, response.status);
+      return null;
+    }
+
+    console.log(`Webhook ${webhookType} triggered successfully`);
+    return true;
+  } catch (error) {
+    console.error(`Error triggering ${webhookType} webhook:`, error);
+    return null;
+  }
+};
+
+/**
+ * Create a manual appointment (admin only)
+ */
+export const createManualAppointment = async (appointmentData) => {
+  try {
+    const { data, error } = await supabase
+      .from('appointments')
+      .insert({
+        booking_id: `MANUAL-${Date.now()}`,
+        customer_name: appointmentData.customerName,
+        customer_email: appointmentData.customerEmail,
+        customer_phone: appointmentData.customerPhone,
+        consultation_type: appointmentData.consultationType,
+        appointment_date: appointmentData.appointmentDate,
+        start_time: appointmentData.startTime,
+        end_time: appointmentData.endTime,
+        price: appointmentData.price || 0,
+        payment_status: appointmentData.paymentStatus || 'pending',
+        appointment_status: 'scheduled',
+        location: appointmentData.location,
+        notes: appointmentData.notes,
+        created_at: new Date().toISOString()
+      })
+      .select();
+
+    if (error) {
+      console.error('Error creating manual appointment:', error);
+      throw error;
+    }
+
+    return data?.[0];
+  } catch (error) {
+    console.error('Error in createManualAppointment:', error);
     throw error;
   }
 };

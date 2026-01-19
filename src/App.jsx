@@ -14,6 +14,7 @@ const Home = lazy(() => import('./pages/Home'));
 const About = lazy(() => import('./pages/About'));
 const Shop = lazy(() => import('./pages/Shop'));
 const Services = lazy(() => import('./pages/Services'));
+const BookConsultation = lazy(() => import('./pages/BookConsultation'));
 const Testimonials = lazy(() => import('./pages/Testimonials'));
 const Contact = lazy(() => import('./pages/Contact'));
 const Blog = lazy(() => import('./pages/Blog'));
@@ -37,6 +38,7 @@ const AdminPrescriptionRequests = lazy(() => import('./pages/Admin/AdminPrescrip
 const AdminActivityLogs = lazy(() => import('./pages/Admin/AdminActivityLogs'));
 const AdminWebinarRegistrations = lazy(() => import('./pages/Admin/AdminWebinarRegistrations'));
 const AdminAppointments = lazy(() => import('./pages/Admin/AdminAppointments'));
+const AdminCalendar = lazy(() => import('./pages/Admin/AdminCalendar'));
 const AdminAffiliates = lazy(() => import('./pages/Admin/AdminAffiliates'));
 const ProtectedRoute = lazy(() => import('./components/Admin/ProtectedRoute'));
 const PrescriptionPurchase = lazy(() => import('./pages/PrescriptionPurchase'));
@@ -103,6 +105,15 @@ function App() {
           <>
             <Header />
             <Services />
+            <Footer />
+            <CartModal />
+            <FloatingCartButton />
+          </>
+        } />
+        <Route path="/book-consultation" element={
+          <>
+            <Header />
+            <BookConsultation />
             <Footer />
             <CartModal />
             <FloatingCartButton />
@@ -260,6 +271,11 @@ function App() {
         <Route path="/admin/appointments" element={
           <ProtectedRoute>
             <AdminAppointments />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/calendar" element={
+          <ProtectedRoute>
+            <AdminCalendar />
           </ProtectedRoute>
         } />
         <Route path="/admin/affiliates" element={
