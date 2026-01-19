@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaCalendarAlt, FaEnvelope, FaUser, FaPhone, FaVideo, FaUserMd, FaClock, FaTrash, FaMapMarkerAlt, FaCheck, FaTimes, FaFilter, FaEdit, FaSpinner, FaChevronLeft, FaChevronRight, FaPlus } from 'react-icons/fa';
+import { FaCalendarAlt, FaEnvelope, FaUser, FaPhone, FaVideo, FaUserMd, FaClock, FaMapMarkerAlt, FaCheck, FaTimes, FaFilter, FaEdit, FaSpinner, FaChevronLeft, FaChevronRight, FaPlus } from 'react-icons/fa';
 import AdminLayout from '../../components/Admin/AdminLayout';
-import { useAdmin } from '../../context/AdminContext';
 import { getAllConsultationBookings, updateConsultationBookingStatus, cancelConsultationBooking, rescheduleConsultationBooking, getAvailableSlots, getCalendarSettings, triggerMakeWebhook, createManualAppointment } from '../../lib/supabase';
 
 // Create Appointment Modal Component
@@ -612,7 +611,6 @@ const RescheduleModal = ({ appointment, onClose, onReschedule }) => {
 
 // Inner component that uses AdminContext
 const AdminAppointmentsContent = () => {
-  const { isSuperAdmin } = useAdmin();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // 'all', 'upcoming', 'past', 'cancelled'
@@ -781,19 +779,6 @@ const AdminAppointmentsContent = () => {
     const aptDate = new Date(dateStr);
     return today.toDateString() === aptDate.toDateString();
   };
-
-  // Only super admin can see this page
-  if (!isSuperAdmin()) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <FaCalendarAlt className="text-5xl text-gray-300 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-600">Access Restricted</h2>
-          <p className="text-gray-500 mt-2">Only super administrators can view this page.</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -1013,13 +998,6 @@ const AdminAppointmentsContent = () => {
                               title="Mark as no show"
                             >
                               <FaTimes />
-                            </button>
-                            <button
-                              onClick={() => handleCancel(appointment)}
-                              className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Cancel appointment"
-                            >
-                              <FaTrash />
                             </button>
                           </>
                         )}
