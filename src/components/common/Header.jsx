@@ -25,7 +25,7 @@ const Header = () => {
     { name: 'About', href: '/about', type: 'route' },
     { name: 'Shop', href: '/shop', type: 'route' },
     { name: 'Book Now', href: '/book-consultation', type: 'route' },
-    { name: 'Webinars', href: '/vitamin-d-talks', type: 'route' },
+    { name: 'Vitamin\u00A0D\u00A0Talks', href: '/vitamin-d-talks', type: 'route' },
     { name: 'Team', href: '/team', type: 'route' },
     { name: 'Reviews', href: '/testimonials', type: 'route' },
     { name: 'Contact', href: '/contact', type: 'route' },
