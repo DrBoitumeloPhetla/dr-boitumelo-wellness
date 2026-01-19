@@ -179,9 +179,10 @@ const Footer = () => {
               </li>
               <li className="flex items-start space-x-3">
                 <FaMapMarkerAlt className="text-gold mt-1 flex-shrink-0" />
-                <span className="text-white/80">
-                  Mpumalanga, South Africa 2285
-                </span>
+                <div className="text-white/80">
+                  <p>Mpumalanga, South Africa 2285</p>
+                  <p className="mt-1">908 St Bernards Drive, Garsfontein, Pretoria East</p>
+                </div>
               </li>
             </ul>
           </div>

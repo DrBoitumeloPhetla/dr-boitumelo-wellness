@@ -113,9 +113,10 @@ const Contact = () => {
     },
     {
       icon: <FaMapMarkerAlt />,
-      title: 'Location',
-      content: 'Mpumalanga, South Africa 2285',
+      title: 'Locations',
+      content: ['Mpumalanga, South Africa 2285', '908 St Bernards Drive, Garsfontein, Pretoria East'],
       link: null,
+      isMultiLine: true,
     },
     {
       icon: <FaClock />,
@@ -337,6 +338,12 @@ const Contact = () => {
                       >
                         {info.content}
                       </a>
+                    ) : info.isMultiLine ? (
+                      <div className="text-gray-600">
+                        {info.content.map((line, idx) => (
+                          <p key={idx} className={idx > 0 ? 'mt-1' : ''}>{line}</p>
+                        ))}
+                      </div>
                     ) : (
                       <p className="text-gray-600">{info.content}</p>
                     )}
