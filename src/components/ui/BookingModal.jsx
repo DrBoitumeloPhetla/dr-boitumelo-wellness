@@ -34,11 +34,11 @@ const BookingModal = ({ isOpen, onClose }) => {
 
   const handleConsultationTypeSelect = (type) => {
     setConsultationType(type);
-    // Pricing: Virtual R1,500, Telephonic R1,000, Face-to-face R1,500
+    // Pricing: Virtual R1,500, Telephonic R500, Face-to-face R1,500
     if (type === 'virtual') {
       setConsultationPrice(1500);
     } else if (type === 'telephonic') {
-      setConsultationPrice(1000);
+      setConsultationPrice(500);
     } else if (type === 'face_to_face') {
       setConsultationPrice(1500);
     }
@@ -234,7 +234,7 @@ const BookingModal = ({ isOpen, onClose }) => {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-gray-800">Virtual Consultation</h3>
-                      <p className="text-gray-600 text-sm mt-1">Video call consultation with Dr. Boitumelo</p>
+                      <p className="text-gray-600 text-sm mt-1">Video call consultation with Dr. Boitumelo. This option includes 2 separate 30 minute sessions. (Assessment Consultation & Treatment Plan Consultation.)</p>
                       <p className="text-yellow-600 font-bold text-lg mt-2">R1,500</p>
                     </div>
                   </div>
@@ -252,7 +252,7 @@ const BookingModal = ({ isOpen, onClose }) => {
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-gray-800">Telephonic Consultation</h3>
                       <p className="text-gray-600 text-sm mt-1">Phone call consultation with Dr. Boitumelo</p>
-                      <p className="text-yellow-600 font-bold text-lg mt-2">R1,000</p>
+                      <p className="text-yellow-600 font-bold text-lg mt-2">R500</p>
                     </div>
                   </div>
                 </div>
@@ -268,7 +268,7 @@ const BookingModal = ({ isOpen, onClose }) => {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-gray-800">Face-to-Face Consultation</h3>
-                      <p className="text-gray-600 text-sm mt-1">In-person consultation at the practice</p>
+                      <p className="text-gray-600 text-sm mt-1">In-person consultation at the practice. This option includes 2 separate 30 minute sessions. (Assessment Consultation & Treatment Plan Consultation.)</p>
                       <div className="flex items-center text-gray-500 text-xs mt-1">
                         <FaMapMarkerAlt className="mr-1" />
                         <span>{practiceAddress}</span>

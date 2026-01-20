@@ -29,12 +29,11 @@ const BookConsultation = () => {
       title: 'Virtual Consultation',
       price: 'R1,500',
       duration: '30 minutes',
-      description: 'Connect with Dr. Boitumelo from the comfort of your home through a secure video call. Perfect for follow-ups, wellness assessments, and supplement consultations.',
+      description: 'Connect with Dr. Boitumelo from the comfort of your home through a secure video call. This option includes 2 separate 30 minute sessions. (Assessment Consultation & Treatment Plan Consultation.)',
       features: [
         'Secure HD video call platform',
         'Screen sharing for test results review',
         'Digital prescription if needed',
-        'Recorded session notes sent via email',
         'No travel required',
       ],
       bestFor: 'Ideal for clients outside Pretoria or those preferring remote consultations',
@@ -45,13 +44,12 @@ const BookConsultation = () => {
       iconBg: 'bg-blue-100',
       iconColor: 'text-blue-600',
       title: 'Telephonic Consultation',
-      price: 'R1,000',
+      price: 'R500',
       duration: '30 minutes',
       description: 'A convenient phone consultation with Dr. Boitumelo. Great for quick check-ins, discussing test results, or getting wellness advice on the go.',
       features: [
         'Direct call from Dr. Boitumelo',
         'Flexible and convenient',
-        'Notes and recommendations via email',
         'Most affordable option',
         'Perfect for quick consultations',
       ],
@@ -65,12 +63,11 @@ const BookConsultation = () => {
       title: 'Face-to-Face Consultation',
       price: 'R1,500',
       duration: '30 minutes',
-      description: 'An in-person consultation at our Garsfontein practice. Experience a comprehensive wellness assessment with hands-on care and personal attention.',
+      description: 'An in-person consultation at our Garsfontein practice. This option includes 2 separate 30 minute sessions. (Assessment Consultation & Treatment Plan Consultation.)',
       features: [
         'Comprehensive physical assessment',
         'In-person supplement demonstration',
         'Immediate product recommendations',
-        'Personal connection with Dr. Boitumelo',
         'Access to in-practice resources',
       ],
       bestFor: 'Ideal for new clients and comprehensive wellness assessments',
@@ -228,7 +225,7 @@ const BookConsultation = () => {
           >
             <h2 className="heading-secondary text-primary-green mb-4">Why Book With Us?</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Experience personalised healthcare that puts your wellness first
+              Experience tailored solutions for your wellness & well-being.
             </p>
           </motion.div>
 
@@ -268,44 +265,40 @@ const BookConsultation = () => {
             <div className="bg-white rounded-2xl shadow-lg p-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                  <h3 className="font-montserrat font-bold text-xl text-gray-800 mb-4">During Your Consultation</h3>
+                  <h3 className="font-montserrat font-bold text-xl text-gray-800 mb-4">During 1st Consultation - Assessment</h3>
                   <ul className="space-y-3">
                     <li className="flex items-start">
-                      <span className="bg-green-100 text-green-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0">1</span>
+                      <FaCheckCircle className="text-green-500 mr-3 mt-1 flex-shrink-0" />
                       <span className="text-gray-600">Comprehensive health and wellness assessment</span>
                     </li>
                     <li className="flex items-start">
-                      <span className="bg-green-100 text-green-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0">2</span>
+                      <FaCheckCircle className="text-green-500 mr-3 mt-1 flex-shrink-0" />
                       <span className="text-gray-600">Discussion of your health goals and concerns</span>
                     </li>
                     <li className="flex items-start">
-                      <span className="bg-green-100 text-green-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0">3</span>
-                      <span className="text-gray-600">Personalised supplement recommendations</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="bg-green-100 text-green-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0">4</span>
-                      <span className="text-gray-600">Lifestyle and nutrition guidance</span>
+                      <FaCheckCircle className="text-green-500 mr-3 mt-1 flex-shrink-0" />
+                      <span className="text-gray-600">Order relevant Investigations</span>
                     </li>
                   </ul>
                 </div>
                 <div>
-                  <h3 className="font-montserrat font-bold text-xl text-gray-800 mb-4">After Your Consultation</h3>
+                  <h3 className="font-montserrat font-bold text-xl text-gray-800 mb-4">During 2nd Consultation - Treatment Plan</h3>
                   <ul className="space-y-3">
                     <li className="flex items-start">
                       <FaCheckCircle className="text-green-500 mr-3 mt-1 flex-shrink-0" />
-                      <span className="text-gray-600">Detailed consultation notes sent via email</span>
+                      <span className="text-gray-600">Interpretation & Investigations</span>
                     </li>
                     <li className="flex items-start">
                       <FaCheckCircle className="text-green-500 mr-3 mt-1 flex-shrink-0" />
-                      <span className="text-gray-600">Personalised wellness plan with actionable steps</span>
+                      <span className="text-gray-600">Personalized Supplements & Medication</span>
                     </li>
                     <li className="flex items-start">
                       <FaCheckCircle className="text-green-500 mr-3 mt-1 flex-shrink-0" />
-                      <span className="text-gray-600">Supplement protocol if recommended</span>
+                      <span className="text-gray-600">Follow up date recommendation</span>
                     </li>
                     <li className="flex items-start">
                       <FaCheckCircle className="text-green-500 mr-3 mt-1 flex-shrink-0" />
-                      <span className="text-gray-600">Easy booking for follow-up consultations</span>
+                      <span className="text-gray-600">Lifestyle modifications</span>
                     </li>
                   </ul>
                 </div>
