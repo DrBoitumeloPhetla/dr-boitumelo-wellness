@@ -161,12 +161,20 @@ const Footer = () => {
             <ul className="space-y-4">
               <li className="flex items-start space-x-3">
                 <FaEnvelope className="text-gold mt-1 flex-shrink-0" />
-                <a
-                  href="mailto:admin@drboitumelowellness.co.za"
-                  className="text-white/80 hover:text-gold transition-colors"
-                >
-                  admin@drboitumelowellness.co.za
-                </a>
+                <div className="text-white/80">
+                  <a
+                    href="mailto:admin@drboitumelowellness.co.za"
+                    className="hover:text-gold transition-colors block"
+                  >
+                    admin@drboitumelowellness.co.za
+                  </a>
+                  <a
+                    href="mailto:drbb@drboitumelowellness.co.za"
+                    className="hover:text-gold transition-colors block mt-1"
+                  >
+                    drbb@drboitumelowellness.co.za
+                  </a>
+                </div>
               </li>
               <li className="flex items-start space-x-3">
                 <FaPhone className="text-gold mt-1 flex-shrink-0" />
