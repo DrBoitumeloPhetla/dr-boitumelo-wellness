@@ -114,7 +114,7 @@ const Contact = () => {
     {
       icon: <FaMapMarkerAlt />,
       title: 'Location',
-      content: 'Mpumalanga, South Africa 2285',
+      content: '908 St Bernards Drive, Garsfontein, Pretoria East',
       link: null,
     },
     {

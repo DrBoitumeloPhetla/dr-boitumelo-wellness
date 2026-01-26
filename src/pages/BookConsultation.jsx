@@ -28,7 +28,7 @@ const BookConsultation = () => {
       iconColor: 'text-green-600',
       title: 'Virtual Consultation',
       price: 'R1,500',
-      duration: '30 minutes',
+      duration: '60 minutes',
       description: 'Connect with Dr. Boitumelo from the comfort of your home through a secure video call. This option includes 2 separate 30 minute sessions. (Assessment Consultation & Treatment Plan Consultation.)',
       features: [
         'Secure HD video call platform',
@@ -62,7 +62,7 @@ const BookConsultation = () => {
       iconColor: 'text-purple-600',
       title: 'Face-to-Face Consultation',
       price: 'R1,500',
-      duration: '30 minutes',
+      duration: '60 minutes',
       description: 'An in-person consultation at our Garsfontein practice. This option includes 2 separate 30 minute sessions. (Assessment Consultation & Treatment Plan Consultation.)',
       features: [
         'Comprehensive physical assessment',
@@ -286,11 +286,11 @@ const BookConsultation = () => {
                   <ul className="space-y-3">
                     <li className="flex items-start">
                       <FaCheckCircle className="text-green-500 mr-3 mt-1 flex-shrink-0" />
-                      <span className="text-gray-600">Interpretation & Investigations</span>
+                      <span className="text-gray-600">Interpretation of Results</span>
                     </li>
                     <li className="flex items-start">
                       <FaCheckCircle className="text-green-500 mr-3 mt-1 flex-shrink-0" />
-                      <span className="text-gray-600">Personalized Supplements & Medication</span>
+                      <span className="text-gray-600">Personalized Supplements and/or Medication</span>
                     </li>
                     <li className="flex items-start">
                       <FaCheckCircle className="text-green-500 mr-3 mt-1 flex-shrink-0" />
