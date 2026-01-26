@@ -123,15 +123,26 @@ const AdminDashboard = () => {
         getAllContacts()
       ]);
 
-      // Calculate stats
-      const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
+      // Get current month's start and end dates
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+      // Filter orders for current month
+      const monthlyOrders = orders.filter(order => {
+        const orderDate = new Date(order.orderDate || order.created_at);
+        return orderDate >= startOfMonth && orderDate <= endOfMonth;
+      });
+
+      // Calculate monthly revenue
+      const monthlyRevenue = monthlyOrders.reduce((sum, order) => sum + order.total, 0);
       const pendingOrders = orders.filter(o => o.status === 'pending').length;
       const newContacts = contacts.filter(c => c.status === 'new').length;
 
       setStats({
-        totalOrders: orders.length,
+        totalOrders: monthlyOrders.length,
         pendingOrders,
-        totalRevenue,
+        totalRevenue: monthlyRevenue,
         totalContacts: contacts.length,
         newContacts
       });
@@ -189,7 +200,7 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <StatCard
             icon={FaShoppingCart}
-            title="Total Orders"
+            title="Monthly Orders"
             value={stats.totalOrders}
             subtitle={`${stats.pendingOrders} pending`}
             color="bg-blue-500"
@@ -198,9 +209,9 @@ const AdminDashboard = () => {
 
           <StatCard
             icon={FaMoneyBillWave}
-            title="Total Revenue"
+            title="Monthly Revenue"
             value={`R${stats.totalRevenue.toFixed(2)}`}
-            subtitle="From orders"
+            subtitle="This month"
             color="bg-green-500"
           />
 
