@@ -123,26 +123,31 @@ const AdminDashboard = () => {
         getAllContacts()
       ]);
 
-      // Get current month's start and end dates
+      // Get current week's start (Monday) and end (Sunday)
       const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      const dayOfWeek = now.getDay();
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+      startOfWeek.setHours(0, 0, 0, 0);
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      endOfWeek.setHours(23, 59, 59, 999);
 
-      // Filter orders for current month
-      const monthlyOrders = orders.filter(order => {
+      // Filter orders for current week
+      const weeklyOrders = orders.filter(order => {
         const orderDate = new Date(order.orderDate || order.created_at);
-        return orderDate >= startOfMonth && orderDate <= endOfMonth;
+        return orderDate >= startOfWeek && orderDate <= endOfWeek;
       });
 
-      // Calculate monthly revenue
-      const monthlyRevenue = monthlyOrders.reduce((sum, order) => sum + order.total, 0);
+      // Calculate weekly revenue
+      const weeklyRevenue = weeklyOrders.reduce((sum, order) => sum + order.total, 0);
       const pendingOrders = orders.filter(o => o.status === 'pending').length;
       const newContacts = contacts.filter(c => c.status === 'new').length;
 
       setStats({
-        totalOrders: monthlyOrders.length,
+        totalOrders: weeklyOrders.length,
         pendingOrders,
-        totalRevenue: monthlyRevenue,
+        totalRevenue: weeklyRevenue,
         totalContacts: contacts.length,
         newContacts
       });
@@ -200,7 +205,7 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <StatCard
             icon={FaShoppingCart}
-            title="Monthly Orders"
+            title="Weekly Orders"
             value={stats.totalOrders}
             subtitle={`${stats.pendingOrders} pending`}
             color="bg-blue-500"
@@ -209,9 +214,9 @@ const AdminDashboard = () => {
 
           <StatCard
             icon={FaMoneyBillWave}
-            title="Monthly Revenue"
+            title="Weekly Revenue"
             value={`R${stats.totalRevenue.toFixed(2)}`}
-            subtitle="This month"
+            subtitle="This week"
             color="bg-green-500"
           />
 
