@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { FaCheck, FaTimes, FaUserMd, FaEnvelope, FaPhone, FaCalendar, FaCopy, FaTrash, FaEyeSlash, FaCreditCard, FaExternalLinkAlt } from 'react-icons/fa';
+import { FaCheck, FaTimes, FaUserMd, FaEnvelope, FaPhone, FaCalendar, FaCopy, FaTrash, FaEyeSlash, FaExternalLinkAlt, FaFilter } from 'react-icons/fa';
 import AdminLayout from '../../components/Admin/AdminLayout';
 import { useAdmin } from '../../context/AdminContext';
 import {
@@ -16,7 +16,7 @@ const AdminWebinarRegistrationsContent = () => {
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, pending, approved, rejected
-  const [paymentFilter, setPaymentFilter] = useState('all'); // all, paid, pending
+  const [webinarFilter, setWebinarFilter] = useState('all'); // filter by specific webinar
   const [selectedRegistration, setSelectedRegistration] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectionModal, setShowRejectionModal] = useState(false);
@@ -33,9 +33,7 @@ const AdminWebinarRegistrationsContent = () => {
     try {
       setLoading(true);
       const data = await getAllWebinarRegistrations();
-      // Only show registrations that have been paid
-      const paidRegistrations = (data || []).filter(reg => reg.payment_status === 'paid');
-      setRegistrations(paidRegistrations);
+      setRegistrations(data || []);
     } catch (error) {
       console.error('Error loading webinar registrations:', error);
     } finally {
@@ -46,12 +44,6 @@ const AdminWebinarRegistrationsContent = () => {
   const handleApprove = async (registration) => {
     if (!canPerform('approve_webinar')) {
       alert('You do not have permission to approve webinar registrations.');
-      return;
-    }
-
-    // Check if payment is confirmed
-    if (registration.payment_status !== 'paid') {
-      alert('Cannot approve registration: Payment has not been confirmed yet.');
       return;
     }
 
@@ -211,7 +203,6 @@ const AdminWebinarRegistrationsContent = () => {
             hpcsaNumber: selectedRegistration.hpcsa_number,
             webinarTitle: selectedRegistration.webinars?.title,
             webinarDate: formattedDate,
-            webinarPrice: selectedRegistration.webinars?.price,
             rejectionReason: rejectionReason,
             timestamp: new Date().toISOString()
           })
@@ -273,9 +264,12 @@ const AdminWebinarRegistrationsContent = () => {
 
   const filteredRegistrations = registrations.filter(reg => {
     const statusMatch = filter === 'all' || reg.status === filter;
-    const paymentMatch = paymentFilter === 'all' || reg.payment_status === paymentFilter;
-    return statusMatch && paymentMatch;
+    const webinarMatch = webinarFilter === 'all' || reg.webinars?.title === webinarFilter;
+    return statusMatch && webinarMatch;
   });
+
+  // Get unique webinar titles for the filter dropdown
+  const uniqueWebinars = [...new Set(registrations.map(r => r.webinars?.title).filter(Boolean))];
 
   const getStatusBadge = (status) => {
     const styles = {
@@ -286,24 +280,11 @@ const AdminWebinarRegistrationsContent = () => {
     return styles[status] || styles.pending;
   };
 
-  const getPaymentBadge = (status) => {
-    const styles = {
-      pending: 'bg-orange-100 text-orange-800',
-      paid: 'bg-green-100 text-green-800',
-      refunded: 'bg-gray-100 text-gray-800'
-    };
-    return styles[status] || styles.pending;
-  };
-
   // Stats
   const stats = {
     total: registrations.length,
     pending: registrations.filter(r => r.status === 'pending').length,
     approved: registrations.filter(r => r.status === 'approved').length,
-    paid: registrations.filter(r => r.payment_status === 'paid').length,
-    revenue: registrations
-      .filter(r => r.payment_status === 'paid')
-      .reduce((sum, r) => sum + parseFloat(r.webinars?.price || 0), 0)
   };
 
   return (
@@ -323,7 +304,7 @@ const AdminWebinarRegistrationsContent = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-2xl font-bold text-gray-800">{stats.total}</div>
           <div className="text-sm text-gray-600">Total Registrations</div>
@@ -336,18 +317,10 @@ const AdminWebinarRegistrationsContent = () => {
           <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
           <div className="text-sm text-gray-600">Approved</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-2xl font-bold text-blue-600">{stats.paid}</div>
-          <div className="text-sm text-gray-600">Paid</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-2xl font-bold text-primary-green">R{stats.revenue.toFixed(0)}</div>
-          <div className="text-sm text-gray-600">Revenue</div>
-        </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4">
+      <div className="flex flex-wrap gap-4 items-center">
         <div className="flex space-x-2 bg-white p-2 rounded-lg shadow">
           {['all', 'pending', 'approved', 'rejected'].map((f) => (
             <button
@@ -363,21 +336,18 @@ const AdminWebinarRegistrationsContent = () => {
             </button>
           ))}
         </div>
-        <div className="flex space-x-2 bg-white p-2 rounded-lg shadow">
-          {['all', 'paid', 'pending'].map((f) => (
-            <button
-              key={f}
-              onClick={() => setPaymentFilter(f)}
-              className={`px-4 py-2 rounded-lg font-semibold capitalize transition-colors flex items-center gap-2 ${
-                paymentFilter === f
-                  ? 'bg-gold text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <FaCreditCard className="text-xs" />
-              {f === 'all' ? 'All Payments' : f}
-            </button>
-          ))}
+        <div className="bg-white p-2 rounded-lg shadow flex items-center gap-2">
+          <FaFilter className="text-gray-500 ml-2" />
+          <select
+            value={webinarFilter}
+            onChange={(e) => setWebinarFilter(e.target.value)}
+            className="px-3 py-2 rounded-lg font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors border-none outline-none cursor-pointer"
+          >
+            <option value="all">All Webinars</option>
+            {uniqueWebinars.map((title) => (
+              <option key={title} value={title}>{title}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -401,7 +371,6 @@ const AdminWebinarRegistrationsContent = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Webinar</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Attendee</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">HPCSA</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
@@ -446,14 +415,6 @@ const AdminWebinarRegistrationsContent = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded text-xs font-semibold ${getPaymentBadge(registration.payment_status)}`}>
-                        {registration.payment_status?.toUpperCase()}
-                      </span>
-                      {registration.payment_reference && (
-                        <div className="text-xs text-gray-500 mt-1">{registration.payment_reference}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusBadge(registration.status)}`}>
                         {registration.status?.toUpperCase()}
                       </span>
@@ -473,13 +434,9 @@ const AdminWebinarRegistrationsContent = () => {
                             <div className="flex space-x-2">
                               <button
                                 onClick={() => handleApprove(registration)}
-                                disabled={processingRequest === registration.id || registration.payment_status !== 'paid'}
-                                className={`px-3 py-1 rounded flex items-center space-x-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
-                                  registration.payment_status === 'paid'
-                                    ? 'bg-green-600 text-white hover:bg-green-700'
-                                    : 'bg-gray-300 text-gray-500'
-                                }`}
-                                title={registration.payment_status !== 'paid' ? 'Payment required' : 'Approve'}
+                                disabled={processingRequest === registration.id}
+                                className="px-3 py-1 rounded flex items-center space-x-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 text-white hover:bg-green-700"
+                                title="Approve"
                               >
                                 <FaCheck />
                                 <span>Approve</span>
