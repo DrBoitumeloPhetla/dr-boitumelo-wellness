@@ -269,7 +269,8 @@ const BookingModal = ({ isOpen, onClose }) => {
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-gray-800">Telephonic Consultation</h3>
                       <p className="text-gray-600 text-sm mt-1">Phone call consultation with Dr. Boitumelo. This option includes 2 separate 30 minute sessions. (Assessment Consultation & Treatment Plan Consultation.)</p>
-                      <p className="text-yellow-600 font-bold text-lg mt-2">From R500</p>
+                      <p className="text-yellow-600 font-bold text-lg mt-2">R500 / R1,000</p>
+                      <p className="text-gray-500 text-xs mt-1">Existing patients: R500 | New patients: R1,000</p>
                     </div>
                   </div>
                 </div>
