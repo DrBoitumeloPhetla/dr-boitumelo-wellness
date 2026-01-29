@@ -44,14 +44,15 @@ const BookConsultation = () => {
       iconBg: 'bg-blue-100',
       iconColor: 'text-blue-600',
       title: 'Telephonic Consultation',
-      price: 'R500',
-      duration: '30 minutes',
-      description: 'A convenient phone consultation with Dr. Boitumelo. Great for quick check-ins, discussing test results, or getting wellness advice on the go.',
+      price: 'R500 / R1,000',
+      priceNote: 'Existing patients: R500 | New patients: R1,000',
+      duration: '60 minutes',
+      description: 'A convenient phone consultation with Dr. Boitumelo. This option includes 2 separate 30 minute sessions. (Assessment Consultation & Treatment Plan Consultation.)',
       features: [
         'Direct call from Dr. Boitumelo',
         'Flexible and convenient',
-        'Most affordable option',
-        'Perfect for quick consultations',
+        'Existing patients: R500',
+        'New patients: R1,000',
       ],
       bestFor: 'Ideal for quick follow-ups and clients with busy schedules',
     },
@@ -167,6 +168,9 @@ const BookConsultation = () => {
                       {consultation.duration}
                     </span>
                   </div>
+                  {consultation.priceNote && (
+                    <p className="text-white/80 text-xs mt-2">{consultation.priceNote}</p>
+                  )}
                 </div>
 
                 {/* Content */}

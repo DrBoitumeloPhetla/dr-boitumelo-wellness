@@ -290,13 +290,13 @@ const AdminWebinarRegistrationsContent = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Webinar Registrations</h1>
-          <p className="text-gray-600 mt-1">Manage Vitamin D Talks registrations</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Webinar Registrations</h1>
+          <p className="text-gray-600 text-sm sm:text-base mt-1">Manage Vitamin D Talks registrations</p>
         </div>
         {isStaffUser() && (
-          <div className="flex items-center space-x-2 px-4 py-2 bg-blue-100 text-blue-800 rounded-lg border border-blue-300">
+          <div className="flex items-center space-x-2 px-4 py-2 bg-blue-100 text-blue-800 rounded-lg border border-blue-300 w-fit">
             <FaEyeSlash />
             <span className="font-semibold text-sm">View Only Mode</span>
           </div>
@@ -304,29 +304,29 @@ const AdminWebinarRegistrationsContent = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-2xl font-bold text-gray-800">{stats.total}</div>
-          <div className="text-sm text-gray-600">Total Registrations</div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4">
+          <div className="text-xl sm:text-2xl font-bold text-gray-800">{stats.total}</div>
+          <div className="text-xs sm:text-sm text-gray-600">Total Registrations</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-          <div className="text-sm text-gray-600">Pending Approval</div>
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4">
+          <div className="text-xl sm:text-2xl font-bold text-yellow-600">{stats.pending}</div>
+          <div className="text-xs sm:text-sm text-gray-600">Pending Approval</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
-          <div className="text-sm text-gray-600">Approved</div>
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4">
+          <div className="text-xl sm:text-2xl font-bold text-green-600">{stats.approved}</div>
+          <div className="text-xs sm:text-sm text-gray-600">Approved</div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4 items-center">
-        <div className="flex space-x-2 bg-white p-2 rounded-lg shadow">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 sm:items-center">
+        <div className="flex flex-wrap gap-2 bg-white p-2 rounded-lg shadow">
           {['all', 'pending', 'approved', 'rejected'].map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-lg font-semibold capitalize transition-colors ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold capitalize transition-colors ${
                 filter === f
                   ? 'bg-primary-green text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -336,12 +336,12 @@ const AdminWebinarRegistrationsContent = () => {
             </button>
           ))}
         </div>
-        <div className="bg-white p-2 rounded-lg shadow flex items-center gap-2">
-          <FaFilter className="text-gray-500 ml-2" />
+        <div className="bg-white p-2 rounded-lg shadow flex items-center gap-2 w-full sm:w-auto">
+          <FaFilter className="text-gray-500 ml-2 flex-shrink-0" />
           <select
             value={webinarFilter}
             onChange={(e) => setWebinarFilter(e.target.value)}
-            className="px-3 py-2 rounded-lg font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors border-none outline-none cursor-pointer"
+            className="px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors border-none outline-none cursor-pointer w-full sm:w-auto"
           >
             <option value="all">All Webinars</option>
             {uniqueWebinars.map((title) => (
@@ -351,7 +351,7 @@ const AdminWebinarRegistrationsContent = () => {
         </div>
       </div>
 
-      {/* Registrations Table */}
+      {/* Registrations List */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {loading ? (
           <div className="p-12 text-center">
@@ -364,145 +364,263 @@ const AdminWebinarRegistrationsContent = () => {
             <p>No registrations found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Webinar</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Attendee</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">HPCSA</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredRegistrations.map((registration) => (
-                  <tr key={registration.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-gray-900">{registration.webinars?.title || 'Unknown'}</div>
-                      <div className="text-sm text-gray-500">
-                        {registration.webinars?.date && new Date(registration.webinars.date).toLocaleDateString('en-ZA')}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm">
-                        <div className="font-medium text-gray-900">
-                          {registration.first_name} {registration.last_name}
-                        </div>
-                        <div className="text-gray-500 flex items-center gap-1">
-                          <FaEnvelope className="text-xs" />
-                          {registration.email}
-                        </div>
-                        <div className="text-gray-500 flex items-center gap-1">
-                          <FaPhone className="text-xs" />
-                          {registration.phone}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                          {registration.hpcsa_number}
-                        </span>
+          <>
+            {/* Mobile Card Layout */}
+            <div className="md:hidden divide-y divide-gray-200">
+              {filteredRegistrations.map((registration) => (
+                <div key={registration.id} className="p-4">
+                  {/* Name + Status */}
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-gray-900 truncate">
+                        {registration.first_name} {registration.last_name}
+                      </p>
+                      <p className="text-xs text-gray-500">{registration.profession}</p>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border flex-shrink-0 ml-2 ${getStatusBadge(registration.status)}`}>
+                      {registration.status?.toUpperCase()}
+                    </span>
+                  </div>
+
+                  {/* Webinar */}
+                  <div className="text-sm text-gray-700 mb-2">
+                    <p className="font-semibold">{registration.webinars?.title || 'Unknown'}</p>
+                    <p className="text-xs text-gray-500">
+                      {registration.webinars?.date && new Date(registration.webinars.date).toLocaleDateString('en-ZA')}
+                    </p>
+                  </div>
+
+                  {/* Contact + HPCSA */}
+                  <div className="text-xs text-gray-500 space-y-1 mb-3">
+                    <div className="flex items-center gap-1.5">
+                      <FaEnvelope className="text-gray-400" />
+                      <span className="truncate">{registration.email}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <FaPhone className="text-gray-400" />
+                      <span>{registration.phone}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <FaUserMd className="text-gray-400" />
+                      <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded">{registration.hpcsa_number}</span>
+                      <button
+                        onClick={() => window.open(`https://www.hpcsa.co.za/verify?regno=${registration.hpcsa_number}`, '_blank')}
+                        className="text-blue-600"
+                      >
+                        <FaExternalLinkAlt className="text-xs" />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <FaCalendar className="text-gray-400" />
+                      <span>Registered: {new Date(registration.created_at).toLocaleDateString('en-ZA')}</span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  {registration.status === 'pending' ? (
+                    canPerform('approve_webinar') ? (
+                      <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
                         <button
-                          onClick={() => window.open(`https://www.hpcsa.co.za/verify?regno=${registration.hpcsa_number}`, '_blank')}
-                          className="text-blue-600 hover:text-blue-800"
-                          title="Verify HPCSA"
+                          onClick={() => handleApprove(registration)}
+                          disabled={processingRequest === registration.id}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50"
                         >
-                          <FaExternalLinkAlt className="text-xs" />
+                          <FaCheck /> Approve
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedRegistration(registration);
+                            setShowRejectionModal(true);
+                          }}
+                          disabled={processingRequest === registration.id}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+                        >
+                          <FaTimes /> Reject
+                        </button>
+                        <button
+                          onClick={() => handleDelete(registration)}
+                          className="flex items-center justify-center gap-1.5 py-1.5 px-3 text-xs text-white bg-gray-600 rounded-lg hover:bg-gray-700"
+                        >
+                          <FaTrash />
                         </button>
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusBadge(registration.status)}`}>
-                        {registration.status?.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-700">
-                        {new Date(registration.created_at).toLocaleDateString('en-ZA')}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(registration.created_at).toLocaleTimeString('en-ZA')}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {registration.status === 'pending' ? (
-                        canPerform('approve_webinar') ? (
-                          <div className="flex flex-col space-y-2">
-                            <div className="flex space-x-2">
+                    ) : (
+                      <p className="text-xs text-gray-500 italic pt-2 border-t border-gray-100">View Only</p>
+                    )
+                  ) : registration.status === 'approved' ? (
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                      <span className="text-xs text-green-600 font-semibold">Approved</span>
+                      {canPerform('delete_webinar') && (
+                        <button
+                          onClick={() => handleDelete(registration)}
+                          className="flex items-center gap-1.5 py-1 px-3 text-xs text-white bg-gray-600 rounded-lg hover:bg-gray-700"
+                        >
+                          <FaTrash /> Delete
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="pt-2 border-t border-gray-100">
+                      {registration.rejection_reason && (
+                        <p className="text-xs text-gray-500 mb-2">
+                          <strong>Reason:</strong> {registration.rejection_reason}
+                        </p>
+                      )}
+                      {canPerform('delete_webinar') && (
+                        <button
+                          onClick={() => handleDelete(registration)}
+                          className="flex items-center gap-1.5 py-1 px-3 text-xs text-white bg-gray-600 rounded-lg hover:bg-gray-700"
+                        >
+                          <FaTrash /> Delete
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table Layout */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Webinar</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Attendee</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">HPCSA</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredRegistrations.map((registration) => (
+                    <tr key={registration.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-gray-900">{registration.webinars?.title || 'Unknown'}</div>
+                        <div className="text-sm text-gray-500">
+                          {registration.webinars?.date && new Date(registration.webinars.date).toLocaleDateString('en-ZA')}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm">
+                          <div className="font-medium text-gray-900">
+                            {registration.first_name} {registration.last_name}
+                          </div>
+                          <div className="text-gray-500 flex items-center gap-1">
+                            <FaEnvelope className="text-xs" />
+                            {registration.email}
+                          </div>
+                          <div className="text-gray-500 flex items-center gap-1">
+                            <FaPhone className="text-xs" />
+                            {registration.phone}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                            {registration.hpcsa_number}
+                          </span>
+                          <button
+                            onClick={() => window.open(`https://www.hpcsa.co.za/verify?regno=${registration.hpcsa_number}`, '_blank')}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="Verify HPCSA"
+                          >
+                            <FaExternalLinkAlt className="text-xs" />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusBadge(registration.status)}`}>
+                          {registration.status?.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-700">
+                          {new Date(registration.created_at).toLocaleDateString('en-ZA')}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(registration.created_at).toLocaleTimeString('en-ZA')}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {registration.status === 'pending' ? (
+                          canPerform('approve_webinar') ? (
+                            <div className="flex flex-col space-y-2">
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={() => handleApprove(registration)}
+                                  disabled={processingRequest === registration.id}
+                                  className="px-3 py-1 rounded flex items-center space-x-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 text-white hover:bg-green-700"
+                                  title="Approve"
+                                >
+                                  <FaCheck />
+                                  <span>Approve</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedRegistration(registration);
+                                    setShowRejectionModal(true);
+                                  }}
+                                  disabled={processingRequest === registration.id}
+                                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 flex items-center space-x-1 text-sm disabled:opacity-50"
+                                >
+                                  <FaTimes />
+                                  <span>Reject</span>
+                                </button>
+                              </div>
                               <button
-                                onClick={() => handleApprove(registration)}
-                                disabled={processingRequest === registration.id}
-                                className="px-3 py-1 rounded flex items-center space-x-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 text-white hover:bg-green-700"
-                                title="Approve"
+                                onClick={() => handleDelete(registration)}
+                                className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center space-x-1 text-xs"
                               >
-                                <FaCheck />
-                                <span>Approve</span>
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedRegistration(registration);
-                                  setShowRejectionModal(true);
-                                }}
-                                disabled={processingRequest === registration.id}
-                                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 flex items-center space-x-1 text-sm disabled:opacity-50"
-                              >
-                                <FaTimes />
-                                <span>Reject</span>
+                                <FaTrash />
+                                <span>Delete</span>
                               </button>
                             </div>
-                            <button
-                              onClick={() => handleDelete(registration)}
-                              className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center space-x-1 text-xs"
-                            >
-                              <FaTrash />
-                              <span>Delete</span>
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-gray-500 italic">View Only</span>
-                        )
-                      ) : registration.status === 'approved' ? (
-                        <div className="space-y-1">
-                          <span className="text-sm text-green-600 font-semibold">Approved</span>
-                          {canPerform('delete_webinar') && (
-                            <button
-                              onClick={() => handleDelete(registration)}
-                              className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center space-x-1 text-xs"
-                            >
-                              <FaTrash />
-                              <span>Delete</span>
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <div className="text-sm text-gray-500">
-                            {registration.rejection_reason && (
-                              <div className="max-w-xs">
-                                <strong>Reason:</strong> {registration.rejection_reason}
-                              </div>
+                          ) : (
+                            <span className="text-sm text-gray-500 italic">View Only</span>
+                          )
+                        ) : registration.status === 'approved' ? (
+                          <div className="space-y-1">
+                            <span className="text-sm text-green-600 font-semibold">Approved</span>
+                            {canPerform('delete_webinar') && (
+                              <button
+                                onClick={() => handleDelete(registration)}
+                                className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center space-x-1 text-xs"
+                              >
+                                <FaTrash />
+                                <span>Delete</span>
+                              </button>
                             )}
                           </div>
-                          {canPerform('delete_webinar') && (
-                            <button
-                              onClick={() => handleDelete(registration)}
-                              className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center space-x-1 text-xs"
-                            >
-                              <FaTrash />
-                              <span>Delete</span>
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="text-sm text-gray-500">
+                              {registration.rejection_reason && (
+                                <div className="max-w-xs">
+                                  <strong>Reason:</strong> {registration.rejection_reason}
+                                </div>
+                              )}
+                            </div>
+                            {canPerform('delete_webinar') && (
+                              <button
+                                onClick={() => handleDelete(registration)}
+                                className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center space-x-1 text-xs"
+                              >
+                                <FaTrash />
+                                <span>Delete</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

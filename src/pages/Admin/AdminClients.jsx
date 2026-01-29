@@ -217,11 +217,11 @@ const AdminClients = () => {
     <AdminLayout>
       <div>
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-montserrat font-bold text-dark-text mb-2">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-montserrat font-bold text-dark-text mb-2">
             Clients
           </h1>
-          <p className="text-gray-600">Manage your customer and patient database</p>
+          <p className="text-gray-600 text-sm sm:text-base">Manage your customer and patient database</p>
         </div>
 
         {/* Sync Message */}
@@ -249,10 +249,10 @@ const AdminClients = () => {
         </div>
 
         {/* Toolbar */}
-        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+        <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 mb-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0">
             {/* Search */}
-            <div className="flex-1 max-w-md">
+            <div className="flex-1 md:max-w-md">
               <div className="relative">
                 <FaSearch className="absolute left-3 top-3 text-gray-400" />
                 <input
@@ -260,17 +260,17 @@ const AdminClients = () => {
                   placeholder="Search by name, email, or phone..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
                 />
               </div>
             </div>
 
             {/* Filters */}
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
+                className="px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
               >
                 <option value="all">All Types</option>
                 <option value="customer">Customers</option>
@@ -282,7 +282,7 @@ const AdminClients = () => {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
+                className="px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -292,25 +292,27 @@ const AdminClients = () => {
 
               <button
                 onClick={handleExportCSV}
-                className="px-4 py-2 bg-primary-green text-white rounded-lg hover:bg-opacity-90 flex items-center space-x-2"
+                className="px-3 sm:px-4 py-2 bg-primary-green text-white rounded-lg hover:bg-opacity-90 flex items-center space-x-2 text-sm"
               >
                 <FaFileExport />
-                <span>Export CSV</span>
+                <span className="hidden sm:inline">Export CSV</span>
+                <span className="sm:hidden">Export</span>
               </button>
 
               <button
                 onClick={handleSyncData}
                 disabled={syncing}
-                className="px-4 py-2 bg-primary-gold text-white rounded-lg hover:bg-opacity-90 flex items-center space-x-2 disabled:opacity-50"
+                className="px-3 sm:px-4 py-2 bg-primary-gold text-white rounded-lg hover:bg-opacity-90 flex items-center space-x-2 disabled:opacity-50 text-sm"
               >
                 <FaSync className={syncing ? 'animate-spin' : ''} />
-                <span>{syncing ? 'Syncing...' : 'Sync Data'}</span>
+                <span className="hidden sm:inline">{syncing ? 'Syncing...' : 'Sync Data'}</span>
+                <span className="sm:hidden">{syncing ? '...' : 'Sync'}</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Clients Table */}
+        {/* Clients List */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           {loading ? (
             <div className="p-8 text-center text-gray-600">
@@ -328,79 +330,142 @@ const AdminClients = () => {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Client
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Contact
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Last Contact
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredClients.map((client) => (
-                    <tr key={client.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 bg-primary-green rounded-full flex items-center justify-center text-white font-bold">
-                            {client.name?.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{client.name}</div>
-                            {client.city && (
-                              <div className="text-sm text-gray-500 flex items-center">
-                                <FaMapMarkerAlt className="mr-1" />
-                                {client.city}
-                              </div>
-                            )}
-                          </div>
+            <>
+              {/* Mobile Card Layout */}
+              <div className="md:hidden divide-y divide-gray-200">
+                {filteredClients.map((client) => (
+                  <div key={client.id} className="p-4">
+                    {/* Name + Avatar */}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="flex-shrink-0 h-9 w-9 bg-primary-green rounded-full flex items-center justify-center text-white font-bold text-sm">
+                          {client.name?.charAt(0).toUpperCase()}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 flex items-center">
-                          <FaPhone className="mr-2 text-gray-400" />
-                          {client.phone}
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{client.name}</p>
+                          {client.city && (
+                            <p className="text-xs text-gray-500 flex items-center gap-1">
+                              <FaMapMarkerAlt /> {client.city}
+                            </p>
+                          )}
                         </div>
-                        {client.email && (
-                          <div className="text-sm text-gray-500 flex items-center">
-                            <FaEnvelope className="mr-2 text-gray-400" />
-                            {client.email}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(client.last_contact_date).toLocaleDateString('en-ZA')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0 ml-2">
                         <button
                           onClick={() => handleViewClient(client.id)}
-                          className="text-primary-green hover:text-primary-green/80 mr-3"
+                          className="text-primary-green hover:text-primary-green/80 p-1.5"
                           title="View Details"
                         >
-                          <FaEye className="text-lg" />
+                          <FaEye />
                         </button>
                         <button
                           onClick={() => handleDeleteClient(client.id, client.name)}
-                          className="text-red-600 hover:text-red-800"
+                          className="text-red-600 hover:text-red-800 p-1.5"
                           title="Delete Client"
                         >
-                          <FaTrash className="text-lg" />
+                          <FaTrash />
                         </button>
-                      </td>
+                      </div>
+                    </div>
+
+                    {/* Contact info */}
+                    <div className="text-xs text-gray-500 space-y-1 ml-12">
+                      {client.phone && (
+                        <div className="flex items-center gap-1.5">
+                          <FaPhone className="text-gray-400" />
+                          <span>{client.phone}</span>
+                        </div>
+                      )}
+                      {client.email && (
+                        <div className="flex items-center gap-1.5">
+                          <FaEnvelope className="text-gray-400" />
+                          <span className="truncate">{client.email}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-1.5">
+                        <FaCalendarAlt className="text-gray-400" />
+                        <span>Last contact: {new Date(client.last_contact_date).toLocaleDateString('en-ZA')}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table Layout */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Client
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Contact
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Last Contact
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredClients.map((client) => (
+                      <tr key={client.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10 bg-primary-green rounded-full flex items-center justify-center text-white font-bold">
+                              {client.name?.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">{client.name}</div>
+                              {client.city && (
+                                <div className="text-sm text-gray-500 flex items-center">
+                                  <FaMapMarkerAlt className="mr-1" />
+                                  {client.city}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900 flex items-center">
+                            <FaPhone className="mr-2 text-gray-400" />
+                            {client.phone}
+                          </div>
+                          {client.email && (
+                            <div className="text-sm text-gray-500 flex items-center">
+                              <FaEnvelope className="mr-2 text-gray-400" />
+                              {client.email}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(client.last_contact_date).toLocaleDateString('en-ZA')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <button
+                            onClick={() => handleViewClient(client.id)}
+                            className="text-primary-green hover:text-primary-green/80 mr-3"
+                            title="View Details"
+                          >
+                            <FaEye className="text-lg" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClient(client.id, client.name)}
+                            className="text-red-600 hover:text-red-800"
+                            title="Delete Client"
+                          >
+                            <FaTrash className="text-lg" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 

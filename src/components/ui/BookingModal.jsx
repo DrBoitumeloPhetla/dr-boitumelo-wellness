@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaTimes, FaArrowLeft, FaArrowRight, FaVideo, FaPhone, FaUserMd, FaCreditCard, FaCheckCircle, FaMapMarkerAlt, FaCalendarCheck } from 'react-icons/fa';
+import { FaTimes, FaArrowLeft, FaArrowRight, FaVideo, FaPhone, FaUserMd, FaCreditCard, FaCheckCircle, FaMapMarkerAlt, FaCalendarCheck, FaUserPlus, FaUser } from 'react-icons/fa';
 import { redirectToPayFast } from '../../lib/payfast';
 import TimeSlotPicker from './TimeSlotPicker';
 
 const BookingModal = ({ isOpen, onClose }) => {
-  const [step, setStep] = useState(1); // 1: Choose type, 2: Select time, 3: Enter details, 4: Payment
+  const [step, setStep] = useState(1); // 1: Choose type, 1.5: Telephonic patient type, 2: Select time, 3: Enter details, 4: Payment
   const [consultationType, setConsultationType] = useState(''); // 'virtual', 'telephonic', or 'face_to_face'
   const [consultationPrice, setConsultationPrice] = useState(0);
+  const [patientType, setPatientType] = useState(''); // 'new' or 'existing' (for telephonic)
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [customerName, setCustomerName] = useState('');
@@ -24,6 +25,7 @@ const BookingModal = ({ isOpen, onClose }) => {
       setStep(1);
       setConsultationType('');
       setConsultationPrice(0);
+      setPatientType('');
       setSelectedSlot(null);
       setCustomerName('');
       setCustomerEmail('');
@@ -34,14 +36,21 @@ const BookingModal = ({ isOpen, onClose }) => {
 
   const handleConsultationTypeSelect = (type) => {
     setConsultationType(type);
-    // Pricing: Virtual R1,500, Telephonic R500, Face-to-face R1,500
     if (type === 'virtual') {
       setConsultationPrice(1500);
+      setStep(2);
     } else if (type === 'telephonic') {
-      setConsultationPrice(500);
+      setStep(1.5); // Go to patient type selection
     } else if (type === 'face_to_face') {
       setConsultationPrice(1500);
+      setStep(2);
     }
+  };
+
+  const handlePatientTypeSelect = (type) => {
+    setPatientType(type);
+    // New patient: R1,000, Existing patient: R500
+    setConsultationPrice(type === 'new' ? 1000 : 500);
     setStep(2); // Go to time selection
   };
 
@@ -86,6 +95,7 @@ const BookingModal = ({ isOpen, onClose }) => {
         customer_phone: customerPhone,
         consultation_type: consultationType,
         consultation_price: consultationPrice,
+        patient_type: patientType || null,
         appointment_date: selectedSlot.dateStr,
         start_time: selectedSlot.startTime,
         end_time: selectedSlot.endTime,
@@ -125,7 +135,12 @@ const BookingModal = ({ isOpen, onClose }) => {
   };
 
   const handleBack = () => {
-    if (step > 1) {
+    if (step === 1.5) {
+      setStep(1);
+      setConsultationType('');
+    } else if (step === 2 && consultationType === 'telephonic') {
+      setStep(1.5);
+    } else if (step > 1) {
       setStep(step - 1);
     }
   };
@@ -179,7 +194,7 @@ const BookingModal = ({ isOpen, onClose }) => {
         >
           {/* Header */}
           <div className="bg-[#2d5f3f] p-3 text-white relative">
-            {step > 1 && (
+            {(step > 1 || step === 1.5) && (
               <button
                 onClick={handleBack}
                 className="absolute top-2 left-2 text-white hover:text-gray-200 transition-colors flex items-center space-x-1 bg-white/20 px-2 py-1 rounded-lg text-sm"
@@ -196,12 +211,14 @@ const BookingModal = ({ isOpen, onClose }) => {
             </button>
             <h2 className="text-xl font-bold text-center text-white">
               {step === 1 && 'Choose Consultation Type'}
+              {step === 1.5 && 'Patient Type'}
               {step === 2 && 'Select Appointment Time'}
               {step === 3 && 'Your Details'}
               {step === 4 && 'Complete Payment'}
             </h2>
             <p className="text-white mt-1 text-center text-xs">
               {step === 1 && 'Select the type of consultation you prefer'}
+              {step === 1.5 && 'Are you a new or existing patient?'}
               {step === 2 && 'Choose your preferred date and time'}
               {step === 3 && 'Enter your contact information'}
               {step === 4 && `Complete payment for your ${getConsultationInfo().name}`}
@@ -218,7 +235,7 @@ const BookingModal = ({ isOpen, onClose }) => {
           </div>
 
           {/* Content */}
-          <div className={step === 1 ? "p-5 overflow-y-auto bg-[#2d5f3f]" : "p-5 overflow-y-auto"} style={{ maxHeight: 'calc(90vh - 100px)' }}>
+          <div className={step === 1 || step === 1.5 ? "p-5 overflow-y-auto bg-[#2d5f3f]" : "p-5 overflow-y-auto"} style={{ maxHeight: 'calc(90vh - 100px)' }}>
 
             {/* STEP 1: Choose Consultation Type */}
             {step === 1 && (
@@ -251,8 +268,8 @@ const BookingModal = ({ isOpen, onClose }) => {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-gray-800">Telephonic Consultation</h3>
-                      <p className="text-gray-600 text-sm mt-1">Phone call consultation with Dr. Boitumelo</p>
-                      <p className="text-yellow-600 font-bold text-lg mt-2">R500</p>
+                      <p className="text-gray-600 text-sm mt-1">Phone call consultation with Dr. Boitumelo. This option includes 2 separate 30 minute sessions. (Assessment Consultation & Treatment Plan Consultation.)</p>
+                      <p className="text-yellow-600 font-bold text-lg mt-2">From R500</p>
                     </div>
                   </div>
                 </div>
@@ -279,8 +296,55 @@ const BookingModal = ({ isOpen, onClose }) => {
                 </div>
 
                 <p className="text-white/70 text-center text-xs mt-4">
-                  All consultations are 30 minutes long
+                  All consultations include 2 separate 30 minute sessions (60 minutes total)
                 </p>
+              </div>
+            )}
+
+            {/* STEP 1.5: Telephonic Patient Type */}
+            {step === 1.5 && (
+              <div className="space-y-4">
+                <div className="text-center mb-4">
+                  <div className="bg-blue-100 p-4 rounded-full inline-block mb-2">
+                    <FaPhone className="text-3xl text-blue-600" />
+                  </div>
+                  <h3 className="text-white text-lg font-bold">Telephonic Consultation</h3>
+                  <p className="text-white/70 text-sm">Please select your patient type</p>
+                </div>
+
+                {/* Existing Patient */}
+                <div
+                  onClick={() => handlePatientTypeSelect('existing')}
+                  className="bg-white/95 p-6 rounded-xl border-2 border-white/30 hover:border-yellow-500 cursor-pointer transition-all transform hover:scale-[1.02]"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-green-100 p-4 rounded-full">
+                      <FaUser className="text-3xl text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-gray-800">Existing Patient</h3>
+                      <p className="text-gray-600 text-sm mt-1">I have consulted with Dr. Boitumelo before</p>
+                      <p className="text-yellow-600 font-bold text-lg mt-2">R500</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* New Patient */}
+                <div
+                  onClick={() => handlePatientTypeSelect('new')}
+                  className="bg-white/95 p-6 rounded-xl border-2 border-white/30 hover:border-yellow-500 cursor-pointer transition-all transform hover:scale-[1.02]"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-blue-100 p-4 rounded-full">
+                      <FaUserPlus className="text-3xl text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-gray-800">New Patient</h3>
+                      <p className="text-gray-600 text-sm mt-1">This is my first consultation with Dr. Boitumelo</p>
+                      <p className="text-yellow-600 font-bold text-lg mt-2">R1,000</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 

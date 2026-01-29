@@ -800,14 +800,14 @@ const AdminAppointmentsContent = () => {
       </AnimatePresence>
 
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Appointments</h1>
-          <p className="text-gray-600 mt-1">Manage all consultation appointments</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Appointments</h1>
+          <p className="text-gray-600 text-sm sm:text-base mt-1">Manage all consultation appointments</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-green text-white rounded-lg hover:bg-green-700 transition-colors"
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-primary-green text-white rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto"
         >
           <FaPlus />
           New Appointment
@@ -815,35 +815,35 @@ const AdminAppointmentsContent = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-2xl font-bold text-gray-800">{stats.total}</div>
-          <div className="text-sm text-gray-600">Total</div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4">
+          <div className="text-xl sm:text-2xl font-bold text-gray-800">{stats.total}</div>
+          <div className="text-xs sm:text-sm text-gray-600">Total</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-2xl font-bold text-blue-600">{stats.upcoming}</div>
-          <div className="text-sm text-gray-600">Upcoming</div>
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4">
+          <div className="text-xl sm:text-2xl font-bold text-blue-600">{stats.upcoming}</div>
+          <div className="text-xs sm:text-sm text-gray-600">Upcoming</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-2xl font-bold text-primary-green">R{stats.revenue.toFixed(0)}</div>
-          <div className="text-sm text-gray-600">Revenue</div>
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4">
+          <div className="text-xl sm:text-2xl font-bold text-primary-green">R{stats.revenue.toFixed(0)}</div>
+          <div className="text-xs sm:text-sm text-gray-600">Revenue</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
-          <div className="text-2xl font-bold text-green-600">{stats.virtual}</div>
-          <div className="text-sm text-gray-600">Virtual</div>
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4 border-l-4 border-green-500">
+          <div className="text-xl sm:text-2xl font-bold text-green-600">{stats.virtual}</div>
+          <div className="text-xs sm:text-sm text-gray-600">Virtual</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
-          <div className="text-2xl font-bold text-blue-600">{stats.telephonic}</div>
-          <div className="text-sm text-gray-600">Telephonic</div>
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4 border-l-4 border-blue-500">
+          <div className="text-xl sm:text-2xl font-bold text-blue-600">{stats.telephonic}</div>
+          <div className="text-xs sm:text-sm text-gray-600">Telephonic</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
-          <div className="text-2xl font-bold text-purple-600">{stats.faceToFace}</div>
-          <div className="text-sm text-gray-600">Face-to-Face</div>
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4 border-l-4 border-purple-500">
+          <div className="text-xl sm:text-2xl font-bold text-purple-600">{stats.faceToFace}</div>
+          <div className="text-xs sm:text-sm text-gray-600">Face-to-Face</div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-4 items-center">
+      <div className="bg-white rounded-lg shadow p-3 sm:p-4 space-y-3 sm:space-y-0 sm:flex sm:flex-wrap sm:gap-4 sm:items-center">
         <div className="flex items-center gap-2">
           <FaFilter className="text-gray-400" />
           <span className="text-sm font-medium text-gray-600">Filter:</span>
@@ -853,7 +853,7 @@ const AdminAppointmentsContent = () => {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors ${
                 filter === f
                   ? 'bg-primary-green text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -863,12 +863,12 @@ const AdminAppointmentsContent = () => {
             </button>
           ))}
         </div>
-        <div className="border-l pl-4 flex flex-wrap gap-2">
+        <div className="border-t sm:border-t-0 sm:border-l pt-3 sm:pt-0 sm:pl-4 flex flex-wrap gap-2">
           {['all', 'virtual', 'telephonic', 'face_to_face'].map(t => (
             <button
               key={t}
               onClick={() => setTypeFilter(t)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
+              className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors flex items-center gap-1 ${
                 typeFilter === t
                   ? 'bg-primary-green text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -881,7 +881,7 @@ const AdminAppointmentsContent = () => {
         </div>
       </div>
 
-      {/* Appointments Table */}
+      {/* Appointments List */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {loading ? (
           <div className="p-12 text-center">
@@ -894,120 +894,208 @@ const AdminAppointmentsContent = () => {
             <p>No appointments found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date & Time</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredAppointments.map((appointment) => (
-                  <tr
-                    key={appointment.id}
-                    className={`hover:bg-gray-50 ${isToday(appointment.appointment_date) ? 'bg-yellow-50' : ''}`}
-                  >
-                    <td className="px-6 py-4">
-                      <div className="text-sm">
-                        <div className="font-medium text-gray-900 flex items-center gap-2">
-                          <FaUser className="text-gray-400" />
-                          {appointment.customer_name}
-                        </div>
-                        <div className="text-gray-500 flex items-center gap-2 mt-1">
-                          <FaEnvelope className="text-xs" />
-                          {appointment.customer_email}
-                        </div>
-                        {appointment.customer_phone && (
-                          <div className="text-gray-500 flex items-center gap-2 mt-1">
-                            <FaPhone className="text-xs" />
-                            {appointment.customer_phone}
-                          </div>
-                        )}
+          <>
+            {/* Mobile Card Layout */}
+            <div className="md:hidden divide-y divide-gray-200">
+              {filteredAppointments.map((appointment) => (
+                <div
+                  key={appointment.id}
+                  className={`p-4 ${isToday(appointment.appointment_date) ? 'bg-yellow-50' : ''}`}
+                >
+                  {/* Top row: Name + Status */}
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <FaUser className="text-gray-400 flex-shrink-0" />
+                      <span className="font-medium text-gray-900 truncate">{appointment.customer_name}</span>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize flex-shrink-0 ml-2 ${getStatusBadge(appointment.appointment_status)}`}>
+                      {appointment.appointment_status.replace('_', ' ')}
+                    </span>
+                  </div>
+
+                  {/* Type + Date */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`p-1.5 rounded-full ${getTypeInfo(appointment.consultation_type).bg}`}>
+                      <span className={`text-xs ${getTypeInfo(appointment.consultation_type).color}`}>
+                        {getTypeInfo(appointment.consultation_type).icon}
+                      </span>
+                    </div>
+                    <span className="text-sm text-gray-700">{getTypeInfo(appointment.consultation_type).label}</span>
+                    <span className="text-gray-300">|</span>
+                    <span className="text-sm font-bold text-primary-green">R{appointment.price}</span>
+                  </div>
+
+                  {/* Date & Time */}
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                    <FaCalendarAlt className="text-xs text-gray-400" />
+                    <span className={isToday(appointment.appointment_date) ? 'text-yellow-600 font-medium' : ''}>
+                      {isToday(appointment.appointment_date) && (
+                        <span className="bg-yellow-200 text-yellow-800 text-xs px-1.5 py-0.5 rounded mr-1">TODAY</span>
+                      )}
+                      {formatDate(appointment.appointment_date)}
+                    </span>
+                    <span className="text-gray-300">|</span>
+                    <FaClock className="text-xs text-gray-400" />
+                    <span>{appointment.start_time.substring(0, 5)} - {appointment.end_time.substring(0, 5)}</span>
+                  </div>
+
+                  {/* Contact info */}
+                  <div className="text-xs text-gray-500 space-y-1 mb-3">
+                    <div className="flex items-center gap-1.5">
+                      <FaEnvelope className="text-gray-400" />
+                      <span className="truncate">{appointment.customer_email}</span>
+                    </div>
+                    {appointment.customer_phone && (
+                      <div className="flex items-center gap-1.5">
+                        <FaPhone className="text-gray-400" />
+                        <span>{appointment.customer_phone}</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className={`p-2 rounded-full ${getTypeInfo(appointment.consultation_type).bg}`}>
-                          <span className={getTypeInfo(appointment.consultation_type).color}>
-                            {getTypeInfo(appointment.consultation_type).icon}
-                          </span>
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-800">
-                            {getTypeInfo(appointment.consultation_type).label}
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  {appointment.appointment_status === 'scheduled' && (
+                    <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+                      <button
+                        onClick={() => setRescheduleAppointment(appointment)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                      >
+                        <FaEdit /> Reschedule
+                      </button>
+                      <button
+                        onClick={() => handleStatusUpdate(appointment, 'completed')}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                      >
+                        <FaCheck /> Complete
+                      </button>
+                      <button
+                        onClick={() => handleStatusUpdate(appointment, 'no_show')}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs text-yellow-600 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors"
+                      >
+                        <FaTimes /> No Show
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table Layout */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date & Time</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredAppointments.map((appointment) => (
+                    <tr
+                      key={appointment.id}
+                      className={`hover:bg-gray-50 ${isToday(appointment.appointment_date) ? 'bg-yellow-50' : ''}`}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="text-sm">
+                          <div className="font-medium text-gray-900 flex items-center gap-2">
+                            <FaUser className="text-gray-400" />
+                            {appointment.customer_name}
                           </div>
-                          {appointment.location && (
-                            <div className="text-xs text-gray-500 flex items-center gap-1">
-                              <FaMapMarkerAlt />
-                              {appointment.location}
+                          <div className="text-gray-500 flex items-center gap-2 mt-1">
+                            <FaEnvelope className="text-xs" />
+                            {appointment.customer_email}
+                          </div>
+                          {appointment.customer_phone && (
+                            <div className="text-gray-500 flex items-center gap-2 mt-1">
+                              <FaPhone className="text-xs" />
+                              {appointment.customer_phone}
                             </div>
                           )}
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm">
-                        <div className={`font-medium ${isToday(appointment.appointment_date) ? 'text-yellow-600' : 'text-gray-800'}`}>
-                          {isToday(appointment.appointment_date) && (
-                            <span className="bg-yellow-200 text-yellow-800 text-xs px-2 py-0.5 rounded mr-2">TODAY</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <div className={`p-2 rounded-full ${getTypeInfo(appointment.consultation_type).bg}`}>
+                            <span className={getTypeInfo(appointment.consultation_type).color}>
+                              {getTypeInfo(appointment.consultation_type).icon}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-800">
+                              {getTypeInfo(appointment.consultation_type).label}
+                            </div>
+                            {appointment.location && (
+                              <div className="text-xs text-gray-500 flex items-center gap-1">
+                                <FaMapMarkerAlt />
+                                {appointment.location}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm">
+                          <div className={`font-medium ${isToday(appointment.appointment_date) ? 'text-yellow-600' : 'text-gray-800'}`}>
+                            {isToday(appointment.appointment_date) && (
+                              <span className="bg-yellow-200 text-yellow-800 text-xs px-2 py-0.5 rounded mr-2">TODAY</span>
+                            )}
+                            {formatDate(appointment.appointment_date)}
+                          </div>
+                          <div className="text-gray-500 flex items-center gap-1 mt-1">
+                            <FaClock className="text-xs" />
+                            {appointment.start_time.substring(0, 5)} - {appointment.end_time.substring(0, 5)}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-lg font-bold text-primary-green">
+                          R{appointment.price}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadge(appointment.appointment_status)}`}>
+                          {appointment.appointment_status.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          {appointment.appointment_status === 'scheduled' && (
+                            <>
+                              <button
+                                onClick={() => setRescheduleAppointment(appointment)}
+                                className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Reschedule appointment"
+                              >
+                                <FaEdit />
+                              </button>
+                              <button
+                                onClick={() => handleStatusUpdate(appointment, 'completed')}
+                                className="p-2 text-green-500 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
+                                title="Mark as completed"
+                              >
+                                <FaCheck />
+                              </button>
+                              <button
+                                onClick={() => handleStatusUpdate(appointment, 'no_show')}
+                                className="p-2 text-yellow-500 hover:text-yellow-700 hover:bg-yellow-50 rounded-lg transition-colors"
+                                title="Mark as no show"
+                              >
+                                <FaTimes />
+                              </button>
+                            </>
                           )}
-                          {formatDate(appointment.appointment_date)}
                         </div>
-                        <div className="text-gray-500 flex items-center gap-1 mt-1">
-                          <FaClock className="text-xs" />
-                          {appointment.start_time.substring(0, 5)} - {appointment.end_time.substring(0, 5)}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-lg font-bold text-primary-green">
-                        R{appointment.price}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadge(appointment.appointment_status)}`}>
-                        {appointment.appointment_status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        {appointment.appointment_status === 'scheduled' && (
-                          <>
-                            <button
-                              onClick={() => setRescheduleAppointment(appointment)}
-                              className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Reschedule appointment"
-                            >
-                              <FaEdit />
-                            </button>
-                            <button
-                              onClick={() => handleStatusUpdate(appointment, 'completed')}
-                              className="p-2 text-green-500 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
-                              title="Mark as completed"
-                            >
-                              <FaCheck />
-                            </button>
-                            <button
-                              onClick={() => handleStatusUpdate(appointment, 'no_show')}
-                              className="p-2 text-yellow-500 hover:text-yellow-700 hover:bg-yellow-50 rounded-lg transition-colors"
-                              title="Mark as no show"
-                            >
-                              <FaTimes />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>
