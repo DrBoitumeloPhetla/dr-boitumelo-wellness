@@ -125,11 +125,12 @@ const Products = () => {
     }
 
     // Add product with discount information
+    const hasMinQuantity = priceInfo?.discount?.min_quantity > 1;
     const productWithDiscount = {
       ...product,
       ...(priceInfo && {
         originalPrice: priceInfo.originalPrice,
-        price: priceInfo.discountedPrice,
+        price: hasMinQuantity ? parseFloat(product.price) : priceInfo.discountedPrice,
         discount: priceInfo.discount
       })
     };
@@ -217,8 +218,14 @@ const Products = () => {
                 {hasDiscount && (
                   <div className="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 animate-pulse">
                     <FaTag className="text-xs" />
-                    {priceInfo.discount.discount_type === 'percentage' && `${priceInfo.discount.discount_value}% OFF`}
-                    {priceInfo.discount.discount_type === 'fixed_amount' && `R${priceInfo.discount.discount_value} OFF`}
+                    {priceInfo.discount.min_quantity > 1 ? (
+                      `Buy ${priceInfo.discount.min_quantity}, get ${priceInfo.discount.discount_value}% OFF`
+                    ) : (
+                      <>
+                        {priceInfo.discount.discount_type === 'percentage' && `${priceInfo.discount.discount_value}% OFF`}
+                        {priceInfo.discount.discount_type === 'fixed_amount' && `R${priceInfo.discount.discount_value} OFF`}
+                      </>
+                    )}
                   </div>
                 )}
                 {product.featured && (
@@ -369,7 +376,7 @@ const Products = () => {
                 {/* Price and Add to Cart */}
                 <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                   <div>
-                    {hasDiscount ? (
+                    {hasDiscount && !(priceInfo.discount.min_quantity > 1) ? (
                       <div className="flex flex-col">
                         <span className="text-sm text-gray-400 line-through">
                           R{priceInfo.originalPrice.toFixed(2)}

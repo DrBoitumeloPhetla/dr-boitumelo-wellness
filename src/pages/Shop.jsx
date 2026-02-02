@@ -165,7 +165,8 @@ const Shop = () => {
       alert('This product is currently out of stock.');
       return;
     }
-    const finalPrice = priceInfo ? priceInfo.discountedPrice : parseFloat(product.price);
+    const hasMinQuantity = priceInfo?.discount?.min_quantity > 1;
+    const finalPrice = (priceInfo && !hasMinQuantity) ? priceInfo.discountedPrice : parseFloat(product.price);
 
     addToCart({
       ...product,
@@ -257,8 +258,14 @@ const Shop = () => {
                     {hasDiscount && (
                       <div className="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 animate-pulse">
                         <FaTag className="text-xs" />
-                        {priceInfo.discount.discount_type === 'percentage' && `${priceInfo.discount.discount_value}% OFF`}
-                        {priceInfo.discount.discount_type === 'fixed_amount' && `R${priceInfo.discount.discount_value} OFF`}
+                        {priceInfo.discount.min_quantity > 1 ? (
+                          `Buy ${priceInfo.discount.min_quantity}, get ${priceInfo.discount.discount_value}% OFF`
+                        ) : (
+                          <>
+                            {priceInfo.discount.discount_type === 'percentage' && `${priceInfo.discount.discount_value}% OFF`}
+                            {priceInfo.discount.discount_type === 'fixed_amount' && `R${priceInfo.discount.discount_value} OFF`}
+                          </>
+                        )}
                       </div>
                     )}
                     {product.requires_prescription && (
@@ -441,7 +448,7 @@ const Shop = () => {
                   {/* Price and Add to Cart */}
                   <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                     <div>
-                      {hasDiscount ? (
+                      {hasDiscount && !(priceInfo.discount.min_quantity > 1) ? (
                         <div className="flex flex-col">
                           <span className="text-sm text-gray-400 line-through">
                             R{priceInfo.originalPrice.toFixed(2)}

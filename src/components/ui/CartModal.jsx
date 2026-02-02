@@ -18,6 +18,7 @@ const CartModal = () => {
     removeFromCart,
     updateQuantity,
     getCartTotal,
+    getItemPrice,
     clearCart,
   } = useCart();
 
@@ -376,7 +377,7 @@ const CartModal = () => {
                           {item.name} x {item.quantity}
                         </span>
                         <span className="font-semibold">
-                          R{((typeof item.price === 'number' ? item.price : parseFloat(item.price)) * item.quantity).toFixed(2)}
+                          R{(getItemPrice(item) * item.quantity).toFixed(2)}
                         </span>
                       </div>
                     ))}
@@ -468,20 +469,36 @@ const CartModal = () => {
                           <h4 className="font-montserrat font-semibold text-dark-text">
                             {item.name}
                           </h4>
-                          {item.discount ? (
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm text-gray-400 line-through">
-                                R{item.originalPrice}
-                              </span>
-                              <span className="text-red-600 font-semibold">
-                                R{item.price}
-                              </span>
-                              <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">
-                                {item.discount.discount_type === 'percentage' && `${item.discount.discount_value}% OFF`}
-                                {item.discount.discount_type === 'fixed_amount' && `R${item.discount.discount_value} OFF`}
-                              </span>
-                            </div>
-                          ) : (
+                          {item.discount ? (() => {
+                            const effectivePrice = getItemPrice(item);
+                            const originalPrice = item.originalPrice || item.price;
+                            const isDiscountActive = effectivePrice < parseFloat(originalPrice);
+                            return isDiscountActive ? (
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm text-gray-400 line-through">
+                                  R{parseFloat(originalPrice).toFixed(2)}
+                                </span>
+                                <span className="text-red-600 font-semibold">
+                                  R{effectivePrice.toFixed(2)}
+                                </span>
+                                <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">
+                                  {item.discount.discount_type === 'percentage' && `${item.discount.discount_value}% OFF`}
+                                  {item.discount.discount_type === 'fixed_amount' && `R${item.discount.discount_value} OFF`}
+                                </span>
+                              </div>
+                            ) : (
+                              <div>
+                                <p className="text-primary-green font-semibold">
+                                  R{parseFloat(originalPrice).toFixed(2)}
+                                </p>
+                                {item.discount.min_quantity > 1 && (
+                                  <p className="text-xs text-gray-500">
+                                    Buy {item.discount.min_quantity}+ for {item.discount.discount_value}% off
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })() : (
                             <p className="text-primary-green font-semibold">
                               R{item.price}
                             </p>
@@ -639,7 +656,7 @@ const CartModal = () => {
                           {item.name} x {item.quantity}
                         </span>
                         <span className="font-semibold">
-                          R{((typeof item.price === 'number' ? item.price : parseFloat(item.price)) * item.quantity).toFixed(2)}
+                          R{(getItemPrice(item) * item.quantity).toFixed(2)}
                         </span>
                       </div>
                     ))}

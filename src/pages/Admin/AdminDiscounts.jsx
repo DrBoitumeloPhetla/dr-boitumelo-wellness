@@ -86,14 +86,19 @@ const AdminDiscountsContent = () => {
       const endDate = new Date(formData.end_date);
 
       const discountData = {
-        ...formData,
-        start_date: startDate.toISOString(),
-        end_date: endDate.toISOString(),
+        name: formData.name,
+        description: formData.description,
+        discount_type: formData.discount_type,
         discount_value: formData.discount_value ? parseFloat(formData.discount_value) : null,
         buy_quantity: formData.buy_quantity ? parseInt(formData.buy_quantity) : null,
         get_quantity: formData.get_quantity ? parseInt(formData.get_quantity) : null,
         min_purchase_amount: formData.min_purchase_amount ? parseFloat(formData.min_purchase_amount) : null,
         min_quantity: formData.min_quantity ? parseInt(formData.min_quantity) : null,
+        apply_to: formData.apply_to,
+        product_ids: formData.product_ids,
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString(),
+        is_active: formData.is_active,
         max_uses: formData.max_uses ? parseInt(formData.max_uses) : null
       };
 

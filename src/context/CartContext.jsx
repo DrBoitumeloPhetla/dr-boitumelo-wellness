@@ -79,11 +79,32 @@ export const CartProvider = ({ children }) => {
     return cartItems.reduce((total, item) => total + item.quantity, 0);
   };
 
+  // Calculate effective price for an item (applies min_quantity discounts)
+  const getItemPrice = (item) => {
+    const originalPrice = item.originalPrice ? parseFloat(item.originalPrice) : (typeof item.price === 'number' ? item.price : parseFloat(item.price));
+    const discount = item.discount;
+
+    // If discount has min_quantity, only apply when quantity meets threshold
+    if (discount && discount.min_quantity > 1) {
+      if (item.quantity >= discount.min_quantity) {
+        if (discount.discount_type === 'percentage') {
+          return originalPrice - (originalPrice * (discount.discount_value / 100));
+        } else if (discount.discount_type === 'fixed_amount') {
+          return Math.max(0, originalPrice - discount.discount_value);
+        }
+      }
+      return originalPrice;
+    }
+
+    // Regular price (already discounted or no discount)
+    const price = typeof item.price === 'number' ? item.price : parseFloat(item.price);
+    return price;
+  };
+
   // Get total price
   const getCartTotal = () => {
     return cartItems.reduce((total, item) => {
-      const price = typeof item.price === 'number' ? item.price : parseFloat(item.price);
-      return total + price * item.quantity;
+      return total + getItemPrice(item) * item.quantity;
     }, 0);
   };
 
@@ -97,6 +118,7 @@ export const CartProvider = ({ children }) => {
     clearCart,
     getCartCount,
     getCartTotal,
+    getItemPrice,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
