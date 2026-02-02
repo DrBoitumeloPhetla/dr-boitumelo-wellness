@@ -577,10 +577,23 @@ const AdminDiscountsContent = () => {
                   </div>
 
                   {/* Optional Fields */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="block font-medium text-gray-700 mb-2">
-                        Minimum Purchase Amount (R)
+                        Minimum Quantity
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={formData.min_quantity}
+                        onChange={(e) => setFormData({ ...formData, min_quantity: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-primary-green focus:ring-2 focus:ring-primary-green/20 outline-none"
+                        placeholder="Optional"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium text-gray-700 mb-2">
+                        Min Purchase Amount (R)
                       </label>
                       <input
                         type="number"
