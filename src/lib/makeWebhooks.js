@@ -338,6 +338,11 @@ export const sendBNPLApplication = async (applicationData) => {
           filename: applicationData.bankStatement.filename,
           contentType: applicationData.bankStatement.contentType,
           base64: applicationData.bankStatement.base64
+        },
+        payslip: {
+          filename: applicationData.payslip.filename,
+          contentType: applicationData.payslip.contentType,
+          base64: applicationData.payslip.base64
         }
       }
     };

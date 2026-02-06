@@ -797,6 +797,7 @@ const CartModal = () => {
         onClose={() => setShowBNPL(false)}
         totalAmount={getGrandTotal()}
         itemDescription={`${cartItems.length} item${cartItems.length > 1 ? 's' : ''} from shop`}
+        onSuccess={clearCart}
       />
     </AnimatePresence>
   );

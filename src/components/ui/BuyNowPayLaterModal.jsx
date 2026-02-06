@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaTimes, FaCalendar, FaFileUpload, FaUser, FaIdCard, FaEnvelope, FaPhone } from 'react-icons/fa';
+import { FaTimes, FaCalendar, FaFileUpload, FaUser, FaIdCard, FaEnvelope, FaPhone, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
 import { sendBNPLApplication } from '../../lib/makeWebhooks';
 
-const BuyNowPayLaterModal = ({ isOpen, onClose, totalAmount, itemDescription }) => {
+const BuyNowPayLaterModal = ({ isOpen, onClose, totalAmount, itemDescription, onSuccess }) => {
   const [step, setStep] = useState(1); // 1: Configure Advance, 2: Your Details
   const [advanceAmount, setAdvanceAmount] = useState(totalAmount);
   const [repaymentTerm, setRepaymentTerm] = useState(2); // months
@@ -13,8 +13,32 @@ const BuyNowPayLaterModal = ({ isOpen, onClose, totalAmount, itemDescription }) 
     email: '',
     mobile: '',
     idDocument: null,
-    bankStatement: null
+    bankStatement: null,
+    payslip: null
   });
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setStep(1);
+      setAdvanceAmount(totalAmount);
+      setRepaymentTerm(2);
+      setFormData({
+        fullName: '',
+        idNumber: '',
+        email: '',
+        mobile: '',
+        idDocument: null,
+        bankStatement: null,
+        payslip: null
+      });
+      setShowSuccessModal(false);
+      setShowErrorModal(false);
+    }
+  }, [isOpen, totalAmount]);
 
   const INTEREST_RATE = 0.30; // 30%
   const MIN_ADVANCE = 400;
@@ -54,14 +78,16 @@ const BuyNowPayLaterModal = ({ isOpen, onClose, totalAmount, itemDescription }) 
   const handleSubmit = async () => {
     try {
       // Validate required fields
-      if (!formData.fullName || !formData.idNumber || !formData.mobile || !formData.idDocument || !formData.bankStatement) {
-        alert('Please fill in all required fields and upload both documents.');
+      if (!formData.fullName || !formData.idNumber || !formData.mobile || !formData.idDocument || !formData.bankStatement || !formData.payslip) {
+        setErrorMessage('Please fill in all required fields and upload all three documents.');
+        setShowErrorModal(true);
         return;
       }
 
       // Convert files to base64
       const idDocumentBase64 = await fileToBase64(formData.idDocument);
       const bankStatementBase64 = await fileToBase64(formData.bankStatement);
+      const payslipBase64 = await fileToBase64(formData.payslip);
 
       // Prepare application data
       const applicationData = {
@@ -83,6 +109,11 @@ const BuyNowPayLaterModal = ({ isOpen, onClose, totalAmount, itemDescription }) 
           filename: formData.bankStatement.name,
           contentType: formData.bankStatement.type,
           base64: bankStatementBase64
+        },
+        payslip: {
+          filename: formData.payslip.name,
+          contentType: formData.payslip.type,
+          base64: payslipBase64
         }
       };
 
@@ -90,15 +121,29 @@ const BuyNowPayLaterModal = ({ isOpen, onClose, totalAmount, itemDescription }) 
       const result = await sendBNPLApplication(applicationData);
 
       if (result.success) {
-        alert('Application submitted successfully! We will contact you shortly.');
-        onClose();
+        setShowSuccessModal(true);
+        // Call onSuccess callback if provided (for clearing cart, etc.)
+        if (onSuccess) {
+          onSuccess();
+        }
       } else {
-        alert('Failed to submit application. Please try again.');
+        setErrorMessage('Failed to submit application. Please try again.');
+        setShowErrorModal(true);
       }
     } catch (error) {
       console.error('Error submitting BNPL application:', error);
-      alert('An error occurred. Please try again.');
+      setErrorMessage('An error occurred. Please try again.');
+      setShowErrorModal(true);
     }
+  };
+
+  const handleSuccessClose = () => {
+    setShowSuccessModal(false);
+    onClose();
+  };
+
+  const handleErrorClose = () => {
+    setShowErrorModal(false);
   };
 
   const handleBack = () => {
@@ -120,7 +165,7 @@ const BuyNowPayLaterModal = ({ isOpen, onClose, totalAmount, itemDescription }) 
         className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
       >
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-primary-green to-green-dark text-white px-6 py-4 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-primary-green to-green-dark text-white px-6 py-4 flex items-center justify-between">
           <h2 className="text-2xl font-bold">
             {step === 1 ? 'Configure Your Advance' : 'Your Details'}
           </h2>
@@ -341,6 +386,26 @@ const BuyNowPayLaterModal = ({ isOpen, onClose, totalAmount, itemDescription }) 
                       </label>
                     </div>
                   </div>
+
+                  {/* Payslip Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Attach Payslip *</label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-gold transition-colors cursor-pointer">
+                      <input
+                        type="file"
+                        id="payslip"
+                        onChange={(e) => handleFileChange(e, 'payslip')}
+                        className="hidden"
+                        accept="image/*,.pdf"
+                      />
+                      <label htmlFor="payslip" className="cursor-pointer">
+                        <FaFileUpload className="mx-auto text-3xl text-gray-400 mb-2" />
+                        <p className="text-sm text-gray-600">
+                          {formData.payslip ? formData.payslip.name : 'Upload Payslip'}
+                        </p>
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -348,7 +413,7 @@ const BuyNowPayLaterModal = ({ isOpen, onClose, totalAmount, itemDescription }) 
         </div>
 
         {/* Footer Buttons */}
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex gap-3">
+        <div className="bg-white border-t border-gray-200 px-6 py-4 flex gap-3">
           <button
             onClick={handleBack}
             className="flex-1 py-3 rounded-lg border-2 border-primary-green text-primary-green font-semibold hover:bg-primary-green hover:text-white transition-colors"
@@ -363,6 +428,70 @@ const BuyNowPayLaterModal = ({ isOpen, onClose, totalAmount, itemDescription }) 
           </button>
         </div>
       </motion.div>
+
+      {/* Success Modal */}
+      <AnimatePresence>
+        {showSuccessModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center"
+            >
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FaCheckCircle className="text-5xl text-green-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">Application Submitted!</h3>
+              <p className="text-gray-600 mb-6">
+                Your Buy Now Pay Later application has been received successfully. We will contact you shortly to confirm your application.
+              </p>
+              <button
+                onClick={handleSuccessClose}
+                className="w-full py-3 bg-primary-green text-white rounded-lg font-semibold hover:bg-green-dark transition-colors"
+              >
+                Done
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Error Modal */}
+      <AnimatePresence>
+        {showErrorModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center"
+            >
+              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FaExclamationCircle className="text-5xl text-red-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">Error</h3>
+              <p className="text-gray-600 mb-6">{errorMessage}</p>
+              <button
+                onClick={handleErrorClose}
+                className="w-full py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
+              >
+                Try Again
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
