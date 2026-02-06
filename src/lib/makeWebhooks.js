@@ -3,6 +3,7 @@
 const ABANDONED_CART_WEBHOOK = import.meta.env.VITE_MAKE_ABANDONED_CART_WEBHOOK;
 const ABANDONED_BOOKING_WEBHOOK = import.meta.env.VITE_MAKE_ABANDONED_BOOKING_WEBHOOK;
 const CHECKOUT_TRACKING_WEBHOOK = 'https://hook.eu2.make.com/sh4jyus34epoqcsbc8mlypmvt3otxtw5';
+const BNPL_APPLICATION_WEBHOOK = import.meta.env.VITE_MAKE_BNPL_WEBHOOK;
 
 /**
  * Send abandoned cart data to Make.com for AI follow-up
@@ -296,6 +297,69 @@ export const sendPurchaseCompleted = async () => {
     return { success: true, data: payload };
   } catch (error) {
     console.error('❌ Error sending Purchase Completed to Make.com:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Send Buy Now Pay Later application to Make.com
+ * Includes base64-encoded file attachments
+ */
+export const sendBNPLApplication = async (applicationData) => {
+  if (!BNPL_APPLICATION_WEBHOOK) {
+    console.warn('BNPL webhook not configured');
+    return { success: false, error: 'Webhook not configured' };
+  }
+
+  try {
+    const payload = {
+      type: 'bnpl_application',
+      timestamp: new Date().toISOString(),
+      customer: {
+        fullName: applicationData.fullName,
+        idNumber: applicationData.idNumber,
+        email: applicationData.email,
+        mobile: applicationData.mobile
+      },
+      payment: {
+        advanceAmount: applicationData.advanceAmount,
+        repaymentPeriod: applicationData.repaymentPeriod,
+        totalRepayable: applicationData.totalRepayable,
+        monthlyInstallment: applicationData.monthlyInstallment
+      },
+      itemDescription: applicationData.itemDescription,
+      attachments: {
+        idDocument: {
+          filename: applicationData.idDocument.filename,
+          contentType: applicationData.idDocument.contentType,
+          base64: applicationData.idDocument.base64
+        },
+        bankStatement: {
+          filename: applicationData.bankStatement.filename,
+          contentType: applicationData.bankStatement.contentType,
+          base64: applicationData.bankStatement.base64
+        }
+      }
+    };
+
+    console.log('📤 Sending BNPL application to Make.com...');
+
+    const response = await fetch(BNPL_APPLICATION_WEBHOOK, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Webhook failed: ${response.status}`);
+    }
+
+    console.log('✅ BNPL application sent to Make.com successfully');
+    return { success: true, data: payload };
+  } catch (error) {
+    console.error('❌ Error sending BNPL application to Make.com:', error);
     return { success: false, error: error.message };
   }
 };

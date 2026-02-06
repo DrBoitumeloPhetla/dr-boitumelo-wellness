@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaArrowLeft, FaArrowRight, FaVideo, FaPhone, FaUserMd, FaCreditCard, FaCheckCircle, FaMapMarkerAlt, FaCalendarCheck, FaUserPlus, FaUser } from 'react-icons/fa';
 import { redirectToPayFast } from '../../lib/payfast';
 import TimeSlotPicker from './TimeSlotPicker';
+import BuyNowPayLaterModal from './BuyNowPayLaterModal';
 
 const BookingModal = ({ isOpen, onClose }) => {
   const [step, setStep] = useState(1); // 1: Choose type, 1.5: Telephonic patient type, 2: Select time, 3: Enter details, 4: Payment
@@ -14,6 +15,7 @@ const BookingModal = ({ isOpen, onClose }) => {
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [showBNPL, setShowBNPL] = useState(false);
   const [sessionId] = useState(() => 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9));
 
   // Practice address
@@ -179,6 +181,16 @@ const BookingModal = ({ isOpen, onClose }) => {
       }
     };
     return info[consultationType] || info['virtual'];
+  };
+
+  // Get item description for BNPL
+  const getBNPLItemDescription = () => {
+    const baseName = getConsultationInfo().name;
+    if (consultationType === 'telephonic' && patientType) {
+      const patientLabel = patientType === 'new' ? 'New Patient' : 'Existing Patient';
+      return `${baseName} - ${patientLabel}`;
+    }
+    return baseName;
   };
 
   if (!isOpen) return null;
@@ -513,23 +525,32 @@ const BookingModal = ({ isOpen, onClose }) => {
                     Your time slot is reserved for 10 minutes. Complete payment to confirm your booking.
                   </p>
 
-                  <button
-                    onClick={handlePayment}
-                    disabled={processing}
-                    className="w-full px-8 py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-xl font-semibold hover:shadow-xl hover:from-yellow-600 hover:to-yellow-700 transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {processing ? (
-                      <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        <span>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Pay R{consultationPrice}</span>
-                        <FaArrowRight />
-                      </>
-                    )}
-                  </button>
+                  <div className="space-y-3">
+                    <button
+                      onClick={handlePayment}
+                      disabled={processing}
+                      className="w-full px-8 py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-xl font-semibold hover:shadow-xl hover:from-yellow-600 hover:to-yellow-700 transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {processing ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Pay R{consultationPrice}</span>
+                          <FaArrowRight />
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => setShowBNPL(true)}
+                      className="w-full px-8 py-3 bg-white border-2 border-gray-800 text-gray-800 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+                    >
+                      Buy Now, Pay Later
+                    </button>
+                  </div>
 
                   <p className="text-xs text-gray-500 mt-4">
                     You will receive a confirmation email after payment.
@@ -538,6 +559,14 @@ const BookingModal = ({ isOpen, onClose }) => {
               </div>
             )}
           </div>
+
+          {/* Buy Now Pay Later Modal */}
+          <BuyNowPayLaterModal
+            isOpen={showBNPL}
+            onClose={() => setShowBNPL(false)}
+            totalAmount={consultationPrice}
+            itemDescription={getBNPLItemDescription()}
+          />
         </motion.div>
       </div>
     </AnimatePresence>

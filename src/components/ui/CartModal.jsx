@@ -6,6 +6,7 @@ import { createOrder, saveAbandonedLead, getAffiliateByCode } from '../../lib/su
 import { sendAbandonedCartToMake, sendCheckoutStarted, sendPurchaseCompleted } from '../../lib/makeWebhooks';
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '../../lib/emailService';
 import { redirectToPayFast } from '../../lib/payfast';
+import BuyNowPayLaterModal from './BuyNowPayLaterModal';
 
 // Get wait time from environment variable (default to 30 minutes)
 const ABANDONED_WAIT_TIME = parseInt(import.meta.env.VITE_ABANDONED_WAIT_TIME) || 1800000;
@@ -24,6 +25,7 @@ const CartModal = () => {
 
   const [showCheckout, setShowCheckout] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
+  const [showBNPL, setShowBNPL] = useState(false);
   const [checkoutData, setCheckoutData] = useState({
     name: '',
     email: '',
@@ -770,16 +772,32 @@ const CartModal = () => {
                   </span>
                 </div>
               </div>
-              <button
-                onClick={() => setShowCheckout(true)}
-                className="btn-primary w-full"
-              >
-                Proceed to Checkout
-              </button>
+              <div className="space-y-3">
+                <button
+                  onClick={() => setShowCheckout(true)}
+                  className="btn-primary w-full"
+                >
+                  Proceed to Checkout
+                </button>
+                <button
+                  onClick={() => setShowBNPL(true)}
+                  className="w-full py-3 px-6 bg-white border-2 border-gray-800 text-gray-800 font-semibold rounded-lg hover:bg-gray-50 transition-all"
+                >
+                  Buy Now, Pay Later
+                </button>
+              </div>
             </div>
           )}
         </motion.div>
       </div>
+
+      {/* Buy Now Pay Later Modal */}
+      <BuyNowPayLaterModal
+        isOpen={showBNPL}
+        onClose={() => setShowBNPL(false)}
+        totalAmount={getGrandTotal()}
+        itemDescription={`${cartItems.length} item${cartItems.length > 1 ? 's' : ''} from shop`}
+      />
     </AnimatePresence>
   );
 };
