@@ -66,8 +66,8 @@ const BookingSuccess = () => {
           appointmentSavedRef.current = false;
         }
       } else {
-        // No pending booking - might be a direct page access or already processed
-        setError('No booking data found. If you just completed payment, please contact support.');
+        // No pending booking - payment went through but data not in localStorage (e.g. mobile browser context switch)
+        // Success header is still shown since PayFast redirected here after successful payment
       }
     };
 
