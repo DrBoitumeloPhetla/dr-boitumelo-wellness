@@ -64,7 +64,7 @@ const BookConsultation = () => {
       title: 'Face-to-Face Consultation',
       price: 'R1,500',
       duration: '60 minutes',
-      description: 'An in-person consultation at our Garsfontein practice. This option includes 2 separate 30 minute sessions. (Assessment Consultation & Treatment Plan Consultation.)',
+      description: 'An in-person consultation at our Pretoria practice. This option includes 2 separate 30 minute sessions. (Assessment Consultation & Treatment Plan Consultation.)',
       features: [
         'Comprehensive physical assessment',
         'In-person supplement demonstration',
@@ -72,7 +72,7 @@ const BookConsultation = () => {
         'Access to in-practice resources',
       ],
       bestFor: 'Ideal for new clients and comprehensive wellness assessments',
-      location: '908 St Bernards Drive, Garsfontein, Pretoria East',
+      location: 'Pretoria',
     },
   ];
 
