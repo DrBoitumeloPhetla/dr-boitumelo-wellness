@@ -4,6 +4,7 @@ const ABANDONED_CART_WEBHOOK = import.meta.env.VITE_MAKE_ABANDONED_CART_WEBHOOK;
 const ABANDONED_BOOKING_WEBHOOK = import.meta.env.VITE_MAKE_ABANDONED_BOOKING_WEBHOOK;
 const CHECKOUT_TRACKING_WEBHOOK = 'https://hook.eu2.make.com/sh4jyus34epoqcsbc8mlypmvt3otxtw5';
 const BNPL_APPLICATION_WEBHOOK = import.meta.env.VITE_MAKE_BNPL_WEBHOOK;
+const FACE_TO_FACE_WEBHOOK = import.meta.env.VITE_FACE_TO_FACE_WEBHOOK;
 
 /**
  * Send abandoned cart data to Make.com for AI follow-up
@@ -365,6 +366,50 @@ export const sendBNPLApplication = async (applicationData) => {
     return { success: true, data: payload };
   } catch (error) {
     console.error('❌ Error sending BNPL application to Make.com:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Send face-to-face booking notification to n8n (TEMPORARY)
+ * Used while Dr. Boitumelo doesn't have a permanent office
+ * Triggers automated emails to patient and doctor
+ */
+export const sendFaceToFaceBooking = async (bookingData) => {
+  if (!FACE_TO_FACE_WEBHOOK) {
+    console.warn('Face-to-face webhook not configured');
+    return { success: false, error: 'Webhook not configured' };
+  }
+
+  try {
+    const payload = {
+      type: 'face_to_face_booking',
+      timestamp: new Date().toISOString(),
+      customer: {
+        name: bookingData.customer_name,
+        email: bookingData.customer_email,
+        phone: bookingData.customer_phone
+      },
+      consultation: {
+        type: 'face_to_face',
+        price: bookingData.consultation_price
+      }
+    };
+
+    const response = await fetch(FACE_TO_FACE_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Webhook failed: ${response.status}`);
+    }
+
+    console.log('✅ Face-to-face booking sent to n8n successfully');
+    return { success: true, data: payload };
+  } catch (error) {
+    console.error('❌ Error sending face-to-face booking to n8n:', error);
     return { success: false, error: error.message };
   }
 };

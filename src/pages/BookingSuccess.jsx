@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaCheckCircle, FaHome, FaCalendarAlt, FaVideo, FaPhone, FaUserMd, FaMapMarkerAlt, FaClock, FaEnvelope } from 'react-icons/fa';
 import { createConsultationBooking, triggerMakeWebhook } from '../lib/supabase';
+import { sendFaceToFaceBooking } from '../lib/makeWebhooks';
 
 const BookingSuccess = () => {
   const navigate = useNavigate();
@@ -24,6 +25,9 @@ const BookingSuccess = () => {
           const data = JSON.parse(pendingBooking);
           setBookingData(data);
 
+          // Face-to-face without time slot: send to n8n webhook (TEMPORARY)
+          const isFaceToFaceNoSlot = data.consultation_type === 'face_to_face' && !data.appointment_date;
+
           // Create the appointment in the database
           await createConsultationBooking({
             bookingId: data.booking_id,
@@ -31,32 +35,37 @@ const BookingSuccess = () => {
             customerEmail: data.customer_email,
             customerPhone: data.customer_phone,
             consultationType: data.consultation_type,
-            appointmentDate: data.appointment_date,
-            startTime: data.start_time,
-            endTime: data.end_time,
+            appointmentDate: data.appointment_date || null,
+            startTime: data.start_time || null,
+            endTime: data.end_time || null,
             price: data.consultation_price,
             paymentStatus: 'paid',
             location: data.location,
-            reservationId: data.reservation_id
+            reservationId: data.reservation_id || null
           });
 
           console.log('Appointment saved:', data);
           setAppointmentSaved(true);
 
-          // Trigger webhook for new appointment confirmation email
-          await triggerMakeWebhook('created', {
-            id: data.booking_id,
-            customer_name: data.customer_name,
-            customer_email: data.customer_email,
-            customer_phone: data.customer_phone,
-            consultation_type: data.consultation_type,
-            appointment_date: data.appointment_date,
-            start_time: data.start_time,
-            end_time: data.end_time,
-            price: data.consultation_price,
-            location: data.location,
-            appointment_status: 'scheduled'
-          });
+          if (isFaceToFaceNoSlot) {
+            // Send to n8n for face-to-face (triggers patient + doctor emails)
+            await sendFaceToFaceBooking(data);
+          } else {
+            // Trigger webhook for new appointment confirmation email
+            await triggerMakeWebhook('created', {
+              id: data.booking_id,
+              customer_name: data.customer_name,
+              customer_email: data.customer_email,
+              customer_phone: data.customer_phone,
+              consultation_type: data.consultation_type,
+              appointment_date: data.appointment_date,
+              start_time: data.start_time,
+              end_time: data.end_time,
+              price: data.consultation_price,
+              location: data.location,
+              appointment_status: 'scheduled'
+            });
+          }
 
           // Clear the pending booking from localStorage
           localStorage.removeItem('pendingBooking');
@@ -125,10 +134,14 @@ const BookingSuccess = () => {
             <FaCheckCircle className="text-5xl text-green-600" />
           </div>
           <h1 className="text-2xl md:text-3xl font-montserrat font-bold text-primary-green mb-2">
-            Booking Confirmed!
+            {bookingData?.consultation_type === 'face_to_face' && !bookingData?.appointment_date
+              ? 'Consultation Secured!'
+              : 'Booking Confirmed!'}
           </h1>
           <p className="text-gray-600">
-            Your appointment has been successfully booked and confirmed.
+            {bookingData?.consultation_type === 'face_to_face' && !bookingData?.appointment_date
+              ? 'Thank you for securing your Face-to-Face Consultation. We will respond within 24 hours to finalize a suitable date and time.'
+              : 'Your appointment has been successfully booked and confirmed.'}
           </p>
         </motion.div>
 
@@ -174,21 +187,33 @@ const BookingSuccess = () => {
 
               {/* Details Grid */}
               <div className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <FaCalendarAlt className="text-gray-400 w-5" />
-                  <div>
-                    <p className="text-sm text-gray-500">Date</p>
-                    <p className="font-medium text-gray-800">{formatDate(bookingData.appointment_date)}</p>
-                  </div>
-                </div>
+                {bookingData.appointment_date ? (
+                  <>
+                    <div className="flex items-center space-x-3">
+                      <FaCalendarAlt className="text-gray-400 w-5" />
+                      <div>
+                        <p className="text-sm text-gray-500">Date</p>
+                        <p className="font-medium text-gray-800">{formatDate(bookingData.appointment_date)}</p>
+                      </div>
+                    </div>
 
-                <div className="flex items-center space-x-3">
-                  <FaClock className="text-gray-400 w-5" />
-                  <div>
-                    <p className="text-sm text-gray-500">Time</p>
-                    <p className="font-medium text-gray-800">{bookingData.start_time} - {bookingData.end_time}</p>
+                    <div className="flex items-center space-x-3">
+                      <FaClock className="text-gray-400 w-5" />
+                      <div>
+                        <p className="text-sm text-gray-500">Time</p>
+                        <p className="font-medium text-gray-800">{bookingData.start_time} - {bookingData.end_time}</p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center space-x-3">
+                    <FaClock className="text-gray-400 w-5" />
+                    <div>
+                      <p className="text-sm text-gray-500">Date & Time</p>
+                      <p className="font-medium text-purple-700">To be confirmed within 24 hours</p>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {bookingData.location && (
                   <div className="flex items-center space-x-3">
@@ -257,7 +282,15 @@ const BookingSuccess = () => {
                   <span className="text-gray-700">Dr. Boitumelo will call you at your scheduled time</span>
                 </li>
               )}
-              {bookingData?.consultation_type === 'face_to_face' && (
+              {bookingData?.consultation_type === 'face_to_face' && !bookingData?.appointment_date && (
+                <li className="flex items-start space-x-3">
+                  <div className="bg-green-100 rounded-full p-1 mt-0.5">
+                    <FaCheckCircle className="text-green-600 text-sm" />
+                  </div>
+                  <span className="text-gray-700">We will contact you within 24 hours to finalize a suitable date and time slot</span>
+                </li>
+              )}
+              {bookingData?.consultation_type === 'face_to_face' && bookingData?.appointment_date && (
                 <li className="flex items-start space-x-3">
                   <div className="bg-green-100 rounded-full p-1 mt-0.5">
                     <FaCheckCircle className="text-green-600 text-sm" />

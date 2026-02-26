@@ -4,6 +4,7 @@ import { FaTimes, FaArrowLeft, FaArrowRight, FaVideo, FaPhone, FaUserMd, FaCredi
 import { redirectToPayFast } from '../../lib/payfast';
 import TimeSlotPicker from './TimeSlotPicker';
 import BuyNowPayLaterModal from './BuyNowPayLaterModal';
+import { sendFaceToFaceBooking } from '../../lib/makeWebhooks';
 
 const BookingModal = ({ isOpen, onClose }) => {
   const [step, setStep] = useState(1); // 1: Choose type, 1.5: Telephonic patient type, 2: Select time, 3: Enter details, 4: Payment
@@ -45,7 +46,7 @@ const BookingModal = ({ isOpen, onClose }) => {
       setStep(1.5); // Go to patient type selection
     } else if (type === 'face_to_face') {
       setConsultationPrice(1500);
-      setStep(2);
+      setStep(3); // Skip time slot selection - go straight to details (TEMPORARY)
     }
   };
 
@@ -77,7 +78,30 @@ const BookingModal = ({ isOpen, onClose }) => {
       alert('Please enter your phone number for face-to-face consultations.');
       return;
     }
+    if (consultationType === 'face_to_face') {
+      handleFaceToFaceSubmit(); // No payment - submit directly (TEMPORARY)
+      return;
+    }
     setStep(4); // Go to payment
+  };
+
+  // TEMPORARY: Submit face-to-face booking without payment
+  const handleFaceToFaceSubmit = async () => {
+    setProcessing(true);
+    try {
+      await sendFaceToFaceBooking({
+        customer_name: customerName,
+        customer_email: customerEmail,
+        customer_phone: customerPhone,
+        consultation_price: consultationPrice
+      });
+      setStep(4); // Go to success confirmation screen
+    } catch (error) {
+      console.error('Error submitting face-to-face booking:', error);
+      alert('Error submitting booking. Please try again.');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const handlePayment = async () => {
@@ -98,10 +122,10 @@ const BookingModal = ({ isOpen, onClose }) => {
         consultation_type: consultationType,
         consultation_price: consultationPrice,
         patient_type: patientType || null,
-        appointment_date: selectedSlot.dateStr,
-        start_time: selectedSlot.startTime,
-        end_time: selectedSlot.endTime,
-        reservation_id: selectedSlot.reservationId,
+        appointment_date: selectedSlot ? selectedSlot.dateStr : null,
+        start_time: selectedSlot ? selectedSlot.startTime : null,
+        end_time: selectedSlot ? selectedSlot.endTime : null,
+        reservation_id: selectedSlot ? selectedSlot.reservationId : null,
         location: location,
         created_at: new Date().toISOString()
       }));
@@ -142,6 +166,9 @@ const BookingModal = ({ isOpen, onClose }) => {
       setConsultationType('');
     } else if (step === 2 && consultationType === 'telephonic') {
       setStep(1.5);
+    } else if (step === 3 && consultationType === 'face_to_face') {
+      setStep(1); // Face-to-face skips step 2, go back to type selection
+      setConsultationType('');
     } else if (step > 1) {
       setStep(step - 1);
     }
@@ -226,14 +253,14 @@ const BookingModal = ({ isOpen, onClose }) => {
               {step === 1.5 && 'Patient Type'}
               {step === 2 && 'Select Appointment Time'}
               {step === 3 && 'Your Details'}
-              {step === 4 && 'Complete Payment'}
+              {step === 4 && (consultationType === 'face_to_face' ? 'Booking Confirmed' : 'Complete Payment')}
             </h2>
             <p className="text-white mt-1 text-center text-xs">
               {step === 1 && 'Select the type of consultation you prefer'}
               {step === 1.5 && 'Are you a new or existing patient?'}
               {step === 2 && 'Choose your preferred date and time'}
               {step === 3 && 'Enter your contact information'}
-              {step === 4 && `Complete payment for your ${getConsultationInfo().name}`}
+              {step === 4 && (consultationType === 'face_to_face' ? 'Your consultation has been secured' : `Complete payment for your ${getConsultationInfo().name}`)}
             </p>
             {/* Step indicator */}
             <div className="flex justify-center mt-2 space-x-2">
@@ -403,14 +430,17 @@ const BookingModal = ({ isOpen, onClose }) => {
                 <div className="bg-green-50 p-4 rounded-xl mb-6 border border-green-200">
                   <div className="flex items-center space-x-2 mb-2">
                     <FaCalendarCheck className="text-green-600" />
-                    <span className="font-semibold text-green-800">Appointment Summary</span>
+                    <span className="font-semibold text-green-800">Booking Summary</span>
                   </div>
                   <div className="text-sm text-gray-700 space-y-1">
                     <p><strong>Type:</strong> {getConsultationInfo().name}</p>
-                    <p><strong>Date:</strong> {formatSelectedDate()}</p>
-                    <p><strong>Time:</strong> {selectedSlot?.startTime} - {selectedSlot?.endTime}</p>
-                    {consultationType === 'face_to_face' && (
-                      <p><strong>Location:</strong> {practiceAddress}</p>
+                    {consultationType === 'face_to_face' ? (
+                      <p className="text-purple-700 italic">A suitable date and time will be confirmed within 24 hours.</p>
+                    ) : (
+                      <>
+                        <p><strong>Date:</strong> {formatSelectedDate()}</p>
+                        <p><strong>Time:</strong> {selectedSlot?.startTime} - {selectedSlot?.endTime}</p>
+                      </>
                     )}
                     <p><strong>Price:</strong> R{consultationPrice}</p>
                   </div>
@@ -455,20 +485,62 @@ const BookingModal = ({ isOpen, onClose }) => {
                   </div>
                 </div>
 
-                {/* Continue to Payment Button */}
+                {/* Continue Button */}
                 <button
                   onClick={handleProceedToPayment}
-                  disabled={!customerName.trim() || !customerEmail.trim() || (consultationType === 'face_to_face' && !customerPhone.trim())}
+                  disabled={!customerName.trim() || !customerEmail.trim() || (consultationType === 'face_to_face' && !customerPhone.trim()) || processing}
                   className="w-full mt-6 px-6 py-3 bg-[#2d5f3f] text-white rounded-xl font-semibold hover:bg-[#234a31] transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <span>Continue to Payment</span>
-                  <FaArrowRight />
+                  {processing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span>Submitting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>{consultationType === 'face_to_face' ? 'Submit Booking' : 'Continue to Payment'}</span>
+                      <FaArrowRight />
+                    </>
+                  )}
                 </button>
               </div>
             )}
 
-            {/* STEP 4: Payment */}
-            {step === 4 && (
+            {/* STEP 4: Payment / Face-to-Face Success */}
+            {step === 4 && consultationType === 'face_to_face' && (
+              <div className="text-center py-6">
+                <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
+                  <FaCheckCircle className="text-5xl text-green-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-primary-green mb-2">Consultation Secured!</h3>
+                <p className="text-gray-600 mb-6">
+                  Thank you for securing your Face-to-Face Consultation with Dr. Boitumelo Phetla. We will respond to you within 24 hours to finalize a suitable date and time slot.
+                </p>
+                <div className="bg-green-50 p-4 rounded-xl border border-green-200 mb-6 text-left">
+                  <div className="text-sm text-gray-700 space-y-2">
+                    <div className="flex justify-between">
+                      <span>Name:</span>
+                      <span className="font-medium">{customerName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Email:</span>
+                      <span className="font-medium">{customerEmail}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Phone:</span>
+                      <span className="font-medium">{customerPhone}</span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleClose}
+                  className="w-full px-8 py-3 bg-[#2d5f3f] text-white rounded-xl font-semibold hover:bg-[#234a31] transition-all"
+                >
+                  Done
+                </button>
+              </div>
+            )}
+            {step === 4 && consultationType !== 'face_to_face' && (
               <div>
                 {/* Final Summary */}
                 <div className="bg-green-50 p-4 rounded-xl mb-6 border border-green-200">
@@ -481,19 +553,19 @@ const BookingModal = ({ isOpen, onClose }) => {
                       <span>Consultation Type:</span>
                       <span className="font-medium">{getConsultationInfo().name}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Date:</span>
-                      <span className="font-medium">{formatSelectedDate()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Time:</span>
-                      <span className="font-medium">{selectedSlot?.startTime} - {selectedSlot?.endTime}</span>
-                    </div>
-                    {consultationType === 'face_to_face' && (
-                      <div className="flex justify-between">
-                        <span>Location:</span>
-                        <span className="font-medium">{practiceAddress}</span>
-                      </div>
+                    {consultationType === 'face_to_face' ? (
+                      <p className="text-purple-700 italic text-xs">Date and time will be confirmed within 24 hours.</p>
+                    ) : (
+                      <>
+                        <div className="flex justify-between">
+                          <span>Date:</span>
+                          <span className="font-medium">{formatSelectedDate()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Time:</span>
+                          <span className="font-medium">{selectedSlot?.startTime} - {selectedSlot?.endTime}</span>
+                        </div>
+                      </>
                     )}
                     <div className="flex justify-between">
                       <span>Name:</span>
@@ -522,7 +594,9 @@ const BookingModal = ({ isOpen, onClose }) => {
                   <FaCreditCard className="text-5xl text-yellow-600 mx-auto mb-4" />
                   <h3 className="text-xl font-bold text-gray-800 mb-2">Secure Payment</h3>
                   <p className="text-gray-600 text-sm mb-6">
-                    Your time slot is reserved for 10 minutes. Complete payment to confirm your booking.
+                    {consultationType === 'face_to_face'
+                      ? 'Complete payment to secure your consultation. We will contact you within 24 hours to finalize a suitable date and time.'
+                      : 'Your time slot is reserved for 10 minutes. Complete payment to confirm your booking.'}
                   </p>
 
                   <div className="space-y-3">
