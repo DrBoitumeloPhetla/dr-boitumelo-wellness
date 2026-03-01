@@ -392,6 +392,7 @@ export const sendFaceToFaceBooking = async (bookingData) => {
       },
       consultation: {
         type: 'face_to_face',
+        session_type: bookingData.session_type || 'single',
         price: bookingData.consultation_price
       }
     };

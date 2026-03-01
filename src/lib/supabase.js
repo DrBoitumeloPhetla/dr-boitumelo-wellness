@@ -3726,3 +3726,58 @@ export const createManualAppointment = async (appointmentData) => {
     throw error;
   }
 };
+
+// ==================== CONSULTATION PRICING ====================
+
+// Get all active consultation pricing
+export const getConsultationPricing = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('consultation_pricing')
+      .select('*')
+      .eq('active', true)
+      .order('consultation_type');
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching consultation pricing:', error);
+    throw error;
+  }
+};
+
+// Get all consultation pricing (including inactive, for admin)
+export const getAllConsultationPricing = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('consultation_pricing')
+      .select('*')
+      .order('consultation_type');
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching all consultation pricing:', error);
+    throw error;
+  }
+};
+
+// Update consultation price
+export const updateConsultationPrice = async (id, updates) => {
+  try {
+    const { data, error } = await supabase
+      .from('consultation_pricing')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select();
+
+    if (error) throw error;
+    return data?.[0];
+  } catch (error) {
+    console.error('Error updating consultation price:', error);
+    throw error;
+  }
+};

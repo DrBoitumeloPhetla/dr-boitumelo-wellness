@@ -58,6 +58,7 @@ const BookingSuccess = () => {
               customer_email: data.customer_email,
               customer_phone: data.customer_phone,
               consultation_type: data.consultation_type,
+              session_type: data.session_type || null,
               appointment_date: data.appointment_date,
               start_time: data.start_time,
               end_time: data.end_time,
@@ -181,7 +182,9 @@ const BookingSuccess = () => {
                   <h3 className="font-bold text-lg text-gray-800">
                     {getConsultationInfo(bookingData.consultation_type).name}
                   </h3>
-                  <p className="text-gray-500 text-sm">30 minutes consultation</p>
+                  <p className="text-gray-500 text-sm">
+                    {bookingData.session_type === 'couples' ? 'Couples session' : 'Individual session'}
+                  </p>
                 </div>
               </div>
 

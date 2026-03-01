@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaCalendarAlt, FaEnvelope, FaUser, FaPhone, FaVideo, FaUserMd, FaClock, FaMapMarkerAlt, FaCheck, FaTimes, FaFilter, FaEdit, FaSpinner, FaChevronLeft, FaChevronRight, FaPlus } from 'react-icons/fa';
 import AdminLayout from '../../components/Admin/AdminLayout';
-import { getAllConsultationBookings, updateConsultationBookingStatus, cancelConsultationBooking, rescheduleConsultationBooking, getAvailableSlots, getCalendarSettings, triggerMakeWebhook, createManualAppointment } from '../../lib/supabase';
+import { getAllConsultationBookings, updateConsultationBookingStatus, cancelConsultationBooking, rescheduleConsultationBooking, getAvailableSlots, getCalendarSettings, triggerMakeWebhook, createManualAppointment, getConsultationPricing } from '../../lib/supabase';
 
 // Create Appointment Modal Component
 const CreateAppointmentModal = ({ onClose, onCreate }) => {
@@ -24,10 +24,26 @@ const CreateAppointmentModal = ({ onClose, onCreate }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  const [pricingData, setPricingData] = useState([]);
+
+  useEffect(() => {
+    getConsultationPricing().then(data => setPricingData(data)).catch(console.error);
+  }, []);
+
+  const getDefaultPrice = (type) => {
+    // Map admin type to DB types for price lookup
+    if (type === 'telephonic') {
+      const found = pricingData.find(p => p.consultation_type === 'telephonic_new' && p.session_type === 'single');
+      return found?.price || 1000;
+    }
+    const found = pricingData.find(p => p.consultation_type === type && p.session_type === 'single');
+    return found?.price || 1500;
+  };
+
   const consultationTypes = [
-    { value: 'virtual', label: 'Virtual Consultation', price: 1500 },
-    { value: 'telephonic', label: 'Telephonic Consultation', price: 1000 },
-    { value: 'face_to_face', label: 'Face-to-Face Consultation', price: 1500 }
+    { value: 'virtual', label: 'Virtual Consultation', price: getDefaultPrice('virtual') },
+    { value: 'telephonic', label: 'Telephonic Consultation', price: getDefaultPrice('telephonic') },
+    { value: 'face_to_face', label: 'Face-to-Face Consultation', price: getDefaultPrice('face_to_face') }
   ];
 
   // Auto-set price and location when consultation type changes

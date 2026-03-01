@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import {
@@ -12,13 +12,38 @@ import {
   FaArrowRight,
 } from 'react-icons/fa';
 import BookingModal from '../components/ui/BookingModal';
+import { getConsultationPricing } from '../lib/supabase';
 
 const BookConsultation = () => {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [pricingData, setPricingData] = useState([]);
   const [ref, inView] = useInView({
     triggerOnce: true,
     threshold: 0.1,
   });
+
+  useEffect(() => {
+    getConsultationPricing().then(data => setPricingData(data)).catch(console.error);
+  }, []);
+
+  // Helper to get price from DB
+  const getPrice = (type, session = 'single') => {
+    const found = pricingData.find(p => p.consultation_type === type && p.session_type === session);
+    return found?.price || null;
+  };
+
+  const getDuration = (type, session = 'single') => {
+    const found = pricingData.find(p => p.consultation_type === type && p.session_type === session);
+    return found?.duration || '60 minutes';
+  };
+
+  // Format price display
+  const virtualSingle = getPrice('virtual', 'single');
+  const virtualCouples = getPrice('virtual', 'couples');
+  const telExisting = getPrice('telephonic_existing', 'single');
+  const telNew = getPrice('telephonic_new', 'single');
+  const f2fSingle = getPrice('face_to_face', 'single');
+  const f2fCouples = getPrice('face_to_face', 'couples');
 
   const consultationTypes = [
     {
@@ -27,14 +52,19 @@ const BookConsultation = () => {
       iconBg: 'bg-green-100',
       iconColor: 'text-green-600',
       title: 'Virtual Consultation',
-      price: 'R1,500',
-      duration: '60 minutes',
+      price: virtualSingle && virtualCouples
+        ? `R${virtualSingle.toLocaleString()} / R${virtualCouples.toLocaleString()}`
+        : 'R1,500 / R2,500',
+      priceNote: virtualSingle && virtualCouples
+        ? `One Person: R${virtualSingle.toLocaleString()} | Per Couple: R${virtualCouples.toLocaleString()}`
+        : 'One Person: R1,500 | Per Couple: R2,500',
+      duration: getDuration('virtual', 'single'),
       description: 'Connect with Dr. Boitumelo from the comfort of your home through a secure video call. This option includes 2 separate 30 minute sessions. (Assessment Consultation & Treatment Plan Consultation.)',
       features: [
         'Secure HD video call platform',
         'Screen sharing for test results review',
         'Digital prescription if needed',
-        'No travel required',
+        'Single & couples sessions available',
       ],
       bestFor: 'Ideal for clients outside Pretoria or those preferring remote consultations',
     },
@@ -44,15 +74,19 @@ const BookConsultation = () => {
       iconBg: 'bg-blue-100',
       iconColor: 'text-blue-600',
       title: 'Telephonic Consultation',
-      price: 'R500 / R1,000',
-      priceNote: 'Existing patients: R500 | New patients: R1,000',
-      duration: '60 minutes',
+      price: telExisting && telNew
+        ? `R${telExisting.toLocaleString()} / R${telNew.toLocaleString()}`
+        : 'R500 / R1,000',
+      priceNote: telExisting && telNew
+        ? `Existing patients: R${telExisting.toLocaleString()} | New patients: R${telNew.toLocaleString()}`
+        : 'Existing patients: R500 | New patients: R1,000',
+      duration: getDuration('telephonic_existing', 'single'),
       description: 'A convenient phone consultation with Dr. Boitumelo. This option includes 2 separate 30 minute sessions. (Assessment Consultation & Treatment Plan Consultation.)',
       features: [
         'Direct call from Dr. Boitumelo',
         'Flexible and convenient',
-        'Existing patients: R500',
-        'New patients: R1,000',
+        `Existing patients: R${(telExisting || 500).toLocaleString()}`,
+        `New patients: R${(telNew || 1000).toLocaleString()}`,
       ],
       bestFor: 'Ideal for quick follow-ups and clients with busy schedules',
     },
@@ -62,14 +96,19 @@ const BookConsultation = () => {
       iconBg: 'bg-purple-100',
       iconColor: 'text-purple-600',
       title: 'Face-to-Face Consultation',
-      price: 'R1,500',
-      duration: '60 minutes',
-      description: 'An in-person consultation at our Pretoria practice. This option includes 2 separate 30 minute sessions. (Assessment Consultation & Treatment Plan Consultation.)',
+      price: f2fSingle && f2fCouples
+        ? `R${f2fSingle.toLocaleString()} / R${f2fCouples.toLocaleString()}`
+        : 'R2,000 / R3,000',
+      priceNote: f2fSingle && f2fCouples
+        ? `One Person: R${f2fSingle.toLocaleString()} (${getDuration('face_to_face', 'single')}) | Per Couple: R${f2fCouples.toLocaleString()} (${getDuration('face_to_face', 'couples')})`
+        : 'One Person: R2,000 (60 min) | Per Couple: R3,000 (60-90 min)',
+      duration: getDuration('face_to_face', 'single'),
+      description: 'An in-person consultation at our Pretoria practice. Includes an assessment session and a virtual feedback session for results and way forward.',
       features: [
         'Comprehensive physical assessment',
         'In-person supplement demonstration',
-        'Immediate product recommendations',
-        'Access to in-practice resources',
+        'Single & couples sessions available',
+        'Virtual feedback session included',
       ],
       bestFor: 'Ideal for new clients and comprehensive wellness assessments',
       location: 'Pretoria',

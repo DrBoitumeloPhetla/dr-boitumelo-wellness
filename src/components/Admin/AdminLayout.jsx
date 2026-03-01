@@ -24,7 +24,8 @@ import {
   FaShieldAlt,
   FaVideo,
   FaHandshake,
-  FaClock
+  FaClock,
+  FaMoneyBillWave
 } from 'react-icons/fa';
 
 // Inner component that uses AdminContext
@@ -81,6 +82,7 @@ const AdminLayoutInner = ({ children }) => {
     { path: '/admin/orders', icon: FaShoppingCart, label: 'Orders', notificationKey: 'orders', requireSuperAdmin: false },
     { path: '/admin/prescription-requests', icon: FaPrescriptionBottle, label: 'Prescription Requests', notificationKey: 'prescriptionRequests', requireSuperAdmin: false },
     { path: '/admin/appointments', icon: FaCalendarAlt, label: 'Consultations', notificationKey: 'consultations', requireSuperAdmin: false },
+    { path: '/admin/consultation-pricing', icon: FaMoneyBillWave, label: 'Consultation Pricing', notificationKey: null, requireSuperAdmin: false },
     { path: '/admin/calendar', icon: FaClock, label: 'Calendar Settings', notificationKey: null, requireSuperAdmin: false },
     { path: '/admin/webinar-registrations', icon: FaVideo, label: 'Webinar Registrations', notificationKey: 'webinarRegistrations', requireSuperAdmin: false },
     { path: '/admin/affiliates', icon: FaHandshake, label: 'Affiliates', notificationKey: null, requireSuperAdmin: false },
