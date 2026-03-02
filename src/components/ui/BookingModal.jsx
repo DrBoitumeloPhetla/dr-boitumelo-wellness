@@ -4,7 +4,6 @@ import { FaTimes, FaArrowLeft, FaArrowRight, FaVideo, FaPhone, FaUserMd, FaCredi
 import { redirectToPayFast } from '../../lib/payfast';
 import TimeSlotPicker from './TimeSlotPicker';
 import BuyNowPayLaterModal from './BuyNowPayLaterModal';
-import { sendFaceToFaceBooking } from '../../lib/makeWebhooks';
 import { getConsultationPricing } from '../../lib/supabase';
 
 const BookingModal = ({ isOpen, onClose }) => {
@@ -111,31 +110,7 @@ const BookingModal = ({ isOpen, onClose }) => {
       alert('Please enter your phone number for face-to-face consultations.');
       return;
     }
-    if (consultationType === 'face_to_face') {
-      handleFaceToFaceSubmit(); // No payment - submit directly (TEMPORARY)
-      return;
-    }
     setStep(4); // Go to payment
-  };
-
-  // TEMPORARY: Submit face-to-face booking without payment
-  const handleFaceToFaceSubmit = async () => {
-    setProcessing(true);
-    try {
-      await sendFaceToFaceBooking({
-        customer_name: customerName,
-        customer_email: customerEmail,
-        customer_phone: customerPhone,
-        consultation_price: consultationPrice,
-        session_type: sessionType || 'single'
-      });
-      setStep(4); // Go to success confirmation screen
-    } catch (error) {
-      console.error('Error submitting face-to-face booking:', error);
-      alert('Error submitting booking. Please try again.');
-    } finally {
-      setProcessing(false);
-    }
   };
 
   const handlePayment = async () => {
@@ -298,7 +273,7 @@ const BookingModal = ({ isOpen, onClose }) => {
               {step === 1.75 && 'Session Type'}
               {step === 2 && 'Select Appointment Time'}
               {step === 3 && 'Your Details'}
-              {step === 4 && (consultationType === 'face_to_face' ? 'Booking Confirmed' : 'Complete Payment')}
+              {step === 4 && 'Complete Payment'}
             </h2>
             <p className="text-white mt-1 text-center text-xs">
               {step === 1 && 'Select the type of consultation you prefer'}
@@ -306,7 +281,7 @@ const BookingModal = ({ isOpen, onClose }) => {
               {step === 1.75 && 'Is this for one person or a couple?'}
               {step === 2 && 'Choose your preferred date and time'}
               {step === 3 && 'Enter your contact information'}
-              {step === 4 && (consultationType === 'face_to_face' ? 'Your consultation has been secured' : `Complete payment for your ${getConsultationInfo().name}`)}
+              {step === 4 && `Complete payment for your ${getConsultationInfo().name}`}
             </p>
             {/* Step indicator */}
             <div className="flex justify-center mt-2 space-x-2">
@@ -377,7 +352,7 @@ const BookingModal = ({ isOpen, onClose }) => {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-gray-800">Face-to-Face Consultation</h3>
-                      <p className="text-gray-600 text-sm mt-1">In-person consultation at the practice. Includes an assessment session and a virtual feedback session for results and way forward.</p>
+                      <p className="text-gray-600 text-sm mt-1">In-person consultation at the practice. Includes a 30 minute complimentary virtual feedback session for results and way forward.</p>
                       <div className="flex items-center text-gray-500 text-xs mt-1">
                         <FaMapMarkerAlt className="mr-1" />
                         <span>{practiceAddress}</span>
@@ -390,7 +365,7 @@ const BookingModal = ({ isOpen, onClose }) => {
                 </div>
 
                 <p className="text-white/70 text-center text-xs mt-4">
-                  All consultations include 2 separate 30 minute sessions (60 minutes total)
+                  Virtual & Telephonic include 2 separate 30 minute sessions (Assessment & Treatment Plan)
                 </p>
               </div>
             )}
@@ -611,7 +586,7 @@ const BookingModal = ({ isOpen, onClose }) => {
                     </>
                   ) : (
                     <>
-                      <span>{consultationType === 'face_to_face' ? 'Submit Booking' : 'Continue to Payment'}</span>
+                      <span>Continue to Payment</span>
                       <FaArrowRight />
                     </>
                   )}
@@ -619,41 +594,8 @@ const BookingModal = ({ isOpen, onClose }) => {
               </div>
             )}
 
-            {/* STEP 4: Payment / Face-to-Face Success */}
-            {step === 4 && consultationType === 'face_to_face' && (
-              <div className="text-center py-6">
-                <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
-                  <FaCheckCircle className="text-5xl text-green-600" />
-                </div>
-                <h3 className="text-2xl font-bold text-primary-green mb-2">Consultation Secured!</h3>
-                <p className="text-gray-600 mb-6">
-                  Thank you for securing your {sessionType === 'couples' ? 'Couples ' : ''}Face-to-Face Consultation with Dr. Boitumelo Phetla. We will respond to you within 24 hours to finalize a suitable date and time slot.
-                </p>
-                <div className="bg-green-50 p-4 rounded-xl border border-green-200 mb-6 text-left">
-                  <div className="text-sm text-gray-700 space-y-2">
-                    <div className="flex justify-between">
-                      <span>Name:</span>
-                      <span className="font-medium">{customerName}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Email:</span>
-                      <span className="font-medium">{customerEmail}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Phone:</span>
-                      <span className="font-medium">{customerPhone}</span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={handleClose}
-                  className="w-full px-8 py-3 bg-[#2d5f3f] text-white rounded-xl font-semibold hover:bg-[#234a31] transition-all"
-                >
-                  Done
-                </button>
-              </div>
-            )}
-            {step === 4 && consultationType !== 'face_to_face' && (
+            {/* STEP 4: Payment */}
+            {step === 4 && (
               <div>
                 {/* Final Summary */}
                 <div className="bg-green-50 p-4 rounded-xl mb-6 border border-green-200">

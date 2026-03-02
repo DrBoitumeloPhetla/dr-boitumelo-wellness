@@ -103,12 +103,12 @@ const BookConsultation = () => {
         ? `One Person: R${f2fSingle.toLocaleString()} (${getDuration('face_to_face', 'single')}) | Per Couple: R${f2fCouples.toLocaleString()} (${getDuration('face_to_face', 'couples')})`
         : 'One Person: R2,000 (60 min) | Per Couple: R3,000 (60-90 min)',
       duration: getDuration('face_to_face', 'single'),
-      description: 'An in-person consultation at our Pretoria practice. Includes an assessment session and a virtual feedback session for results and way forward.',
+      description: 'An in-person consultation at our Pretoria practice. Includes a 30 minute complimentary virtual feedback session for results and way forward.',
       features: [
         'Comprehensive physical assessment',
         'In-person supplement demonstration',
         'Single & couples sessions available',
-        'Virtual feedback session included',
+        '30 min complimentary virtual feedback session',
       ],
       bestFor: 'Ideal for new clients and comprehensive wellness assessments',
       location: 'Pretoria',
@@ -178,7 +178,7 @@ const BookConsultation = () => {
           >
             <h2 className="heading-secondary text-primary-green mb-4">Choose Your Consultation Type</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              We offer three consultation options to suit your needs and preferences. All consultations are 30 minutes long and include a personalised wellness assessment.
+              We offer three consultation options to suit your needs and preferences. Each includes a personalised wellness assessment.
             </p>
           </motion.div>
 
@@ -305,10 +305,15 @@ const BookConsultation = () => {
           >
             <h2 className="heading-secondary text-primary-green mb-8 text-center">What to Expect</h2>
 
-            <div className="bg-white rounded-2xl shadow-lg p-8">
+            {/* Virtual & Telephonic */}
+            <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
+              <h3 className="font-montserrat font-bold text-lg text-primary-green mb-4 flex items-center">
+                <FaVideo className="mr-2" /><FaPhone className="mr-3" /> Virtual & Telephonic Consultations
+              </h3>
+              <p className="text-gray-500 text-sm mb-4">Includes 2 separate 30 minute sessions (Assessment & Treatment Plan)</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                  <h3 className="font-montserrat font-bold text-xl text-gray-800 mb-4">During 1st Consultation - Assessment</h3>
+                  <h4 className="font-montserrat font-bold text-xl text-gray-800 mb-4">1st Session - Assessment</h4>
                   <ul className="space-y-3">
                     <li className="flex items-start">
                       <FaCheckCircle className="text-green-500 mr-3 mt-1 flex-shrink-0" />
@@ -325,7 +330,7 @@ const BookConsultation = () => {
                   </ul>
                 </div>
                 <div>
-                  <h3 className="font-montserrat font-bold text-xl text-gray-800 mb-4">During 2nd Consultation - Treatment Plan</h3>
+                  <h4 className="font-montserrat font-bold text-xl text-gray-800 mb-4">2nd Session - Treatment Plan</h4>
                   <ul className="space-y-3">
                     <li className="flex items-start">
                       <FaCheckCircle className="text-green-500 mr-3 mt-1 flex-shrink-0" />
@@ -342,6 +347,51 @@ const BookConsultation = () => {
                     <li className="flex items-start">
                       <FaCheckCircle className="text-green-500 mr-3 mt-1 flex-shrink-0" />
                       <span className="text-gray-600">Lifestyle modifications</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Face-to-Face */}
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+              <h3 className="font-montserrat font-bold text-lg text-purple-700 mb-4 flex items-center">
+                <FaUserMd className="mr-2" /> Face-to-Face Consultation
+              </h3>
+              <p className="text-gray-500 text-sm mb-4">60 min (single) or 60-90 min (couples) in-person session + 30 min complimentary virtual feedback</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <h4 className="font-montserrat font-bold text-xl text-gray-800 mb-4">In-Person Session</h4>
+                  <ul className="space-y-3">
+                    <li className="flex items-start">
+                      <FaCheckCircle className="text-purple-500 mr-3 mt-1 flex-shrink-0" />
+                      <span className="text-gray-600">Comprehensive physical assessment</span>
+                    </li>
+                    <li className="flex items-start">
+                      <FaCheckCircle className="text-purple-500 mr-3 mt-1 flex-shrink-0" />
+                      <span className="text-gray-600">Discussion of your health goals and concerns</span>
+                    </li>
+                    <li className="flex items-start">
+                      <FaCheckCircle className="text-purple-500 mr-3 mt-1 flex-shrink-0" />
+                      <span className="text-gray-600">Order relevant Investigations</span>
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-montserrat font-bold text-xl text-gray-800 mb-4">Virtual Feedback Session</h4>
+                  <p className="text-sm text-green-600 font-medium mb-3">30 minutes - Complimentary</p>
+                  <ul className="space-y-3">
+                    <li className="flex items-start">
+                      <FaCheckCircle className="text-purple-500 mr-3 mt-1 flex-shrink-0" />
+                      <span className="text-gray-600">Interpretation of Results</span>
+                    </li>
+                    <li className="flex items-start">
+                      <FaCheckCircle className="text-purple-500 mr-3 mt-1 flex-shrink-0" />
+                      <span className="text-gray-600">Personalized Treatment Plan</span>
+                    </li>
+                    <li className="flex items-start">
+                      <FaCheckCircle className="text-purple-500 mr-3 mt-1 flex-shrink-0" />
+                      <span className="text-gray-600">Lifestyle modifications and way forward</span>
                     </li>
                   </ul>
                 </div>
