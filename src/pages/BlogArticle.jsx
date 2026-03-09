@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FaArrowLeft, FaCalendar, FaUser, FaTag } from 'react-icons/fa';
+import { FaArrowLeft, FaCalendar, FaUser, FaTag, FaShareAlt, FaWhatsapp, FaFacebookF, FaTwitter, FaLink, FaCheck } from 'react-icons/fa';
 import { getBlogArticleById } from '../lib/supabase';
 
 const BlogArticle = () => {
@@ -10,6 +10,8 @@ const BlogArticle = () => {
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     loadArticle();
@@ -48,6 +50,59 @@ const BlogArticle = () => {
       day: 'numeric'
     });
   };
+
+  const getArticleUrl = () => `${window.location.origin}/blog/${slug}`;
+
+  const handleShare = async (platform) => {
+    const url = getArticleUrl();
+    const title = article?.title || '';
+
+    switch (platform) {
+      case 'whatsapp':
+        window.open(`https://wa.me/?text=${encodeURIComponent(title + ' - ' + url)}`, '_blank');
+        break;
+      case 'facebook':
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+        break;
+      case 'twitter':
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`, '_blank');
+        break;
+      case 'copy':
+        try {
+          await navigator.clipboard.writeText(url);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } catch {
+          // Fallback for older browsers
+          const textArea = document.createElement('textarea');
+          textArea.value = url;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        }
+        break;
+      case 'native':
+        if (navigator.share) {
+          try {
+            await navigator.share({ title, url });
+          } catch { /* user cancelled */ }
+        }
+        break;
+    }
+    setShowShareMenu(false);
+  };
+
+  // Close share menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setShowShareMenu(false);
+    if (showShareMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showShareMenu]);
 
   if (loading) {
     return (
@@ -105,17 +160,65 @@ const BlogArticle = () => {
 
           {/* Article Meta */}
           <div className="max-w-4xl mx-auto">
-            <div className="flex items-center space-x-4 text-sm text-gray-600 mb-4">
-              <span className="bg-primary-green/10 text-primary-green px-3 py-1 rounded-full font-medium">
-                {article.category}
-              </span>
-              <div className="flex items-center space-x-1">
-                <FaCalendar className="text-xs" />
-                <span>{formatDate(article.published_at || article.created_at)}</span>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-4 text-sm text-gray-600">
+                <span className="bg-primary-green/10 text-primary-green px-3 py-1 rounded-full font-medium">
+                  {article.category}
+                </span>
+                <div className="flex items-center space-x-1">
+                  <FaCalendar className="text-xs" />
+                  <span>{formatDate(article.published_at || article.created_at)}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <FaUser className="text-xs" />
+                  <span>{article.author}</span>
+                </div>
               </div>
-              <div className="flex items-center space-x-1">
-                <FaUser className="text-xs" />
-                <span>{article.author}</span>
+
+              {/* Share Button */}
+              <div className="relative">
+                <button
+                  onClick={(e) => { e.stopPropagation(); navigator.share ? handleShare('native') : setShowShareMenu(!showShareMenu); }}
+                  className="flex items-center space-x-2 px-4 py-2 bg-primary-green text-white rounded-full text-sm font-medium hover:bg-opacity-90 transition-all"
+                >
+                  <FaShareAlt className="text-xs" />
+                  <span>Share</span>
+                </button>
+
+                {/* Share Dropdown */}
+                {showShareMenu && (
+                  <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 w-48">
+                    <button
+                      onClick={() => handleShare('whatsapp')}
+                      className="w-full flex items-center space-x-3 px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                    >
+                      <FaWhatsapp className="text-green-500" />
+                      <span className="text-sm text-gray-700">WhatsApp</span>
+                    </button>
+                    <button
+                      onClick={() => handleShare('facebook')}
+                      className="w-full flex items-center space-x-3 px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                    >
+                      <FaFacebookF className="text-blue-600" />
+                      <span className="text-sm text-gray-700">Facebook</span>
+                    </button>
+                    <button
+                      onClick={() => handleShare('twitter')}
+                      className="w-full flex items-center space-x-3 px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                    >
+                      <FaTwitter className="text-sky-500" />
+                      <span className="text-sm text-gray-700">Twitter / X</span>
+                    </button>
+                    <hr className="my-1" />
+                    <button
+                      onClick={() => handleShare('copy')}
+                      className="w-full flex items-center space-x-3 px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                    >
+                      {copied ? <FaCheck className="text-green-500" /> : <FaLink className="text-gray-400" />}
+                      <span className="text-sm text-gray-700">{copied ? 'Copied!' : 'Copy Link'}</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
