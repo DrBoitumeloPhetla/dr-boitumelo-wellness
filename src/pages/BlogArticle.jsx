@@ -159,27 +159,40 @@ const BlogArticle = () => {
           </Link>
 
           {/* Article Meta */}
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-4 text-sm text-gray-600">
-                <span className="bg-primary-green/10 text-primary-green px-3 py-1 rounded-full font-medium">
-                  {article.category}
-                </span>
-                <div className="flex items-center space-x-1">
-                  <FaCalendar className="text-xs" />
-                  <span>{formatDate(article.published_at || article.created_at)}</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <FaUser className="text-xs" />
-                  <span>{article.author}</span>
-                </div>
+          <div className="max-w-4xl mx-auto text-center">
+            {/* Category */}
+            <span className="inline-block bg-primary-green/10 text-primary-green px-3 py-1 rounded-full font-medium text-sm mb-4">
+              {article.category}
+            </span>
+
+            {/* Title */}
+            <h1 className="text-3xl md:text-5xl lg:text-6xl font-playfair font-bold text-dark-text mb-4">
+              {article.title}
+            </h1>
+
+            {/* Excerpt */}
+            <p className="text-lg md:text-xl text-gray-600 font-montserrat leading-relaxed mb-6">
+              {article.excerpt}
+            </p>
+
+            {/* Date, Author & Share */}
+            <div className="flex items-center justify-center flex-wrap gap-3 text-sm text-gray-500">
+              <div className="flex items-center space-x-1">
+                <FaCalendar className="text-xs" />
+                <span>{formatDate(article.published_at || article.created_at)}</span>
               </div>
+              <span className="hidden sm:inline">|</span>
+              <div className="flex items-center space-x-1">
+                <FaUser className="text-xs" />
+                <span>{article.author}</span>
+              </div>
+              <span className="hidden sm:inline">|</span>
 
               {/* Share Button */}
               <div className="relative">
                 <button
                   onClick={(e) => { e.stopPropagation(); navigator.share ? handleShare('native') : setShowShareMenu(!showShareMenu); }}
-                  className="flex items-center space-x-2 px-4 py-2 bg-primary-green text-white rounded-full text-sm font-medium hover:bg-opacity-90 transition-all"
+                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-primary-green text-white rounded-full text-sm font-medium hover:bg-opacity-90 transition-all"
                 >
                   <FaShareAlt className="text-xs" />
                   <span>Share</span>
@@ -187,7 +200,7 @@ const BlogArticle = () => {
 
                 {/* Share Dropdown */}
                 {showShareMenu && (
-                  <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 w-48">
+                  <div className="absolute right-0 md:left-1/2 md:-translate-x-1/2 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 w-48">
                     <button
                       onClick={() => handleShare('whatsapp')}
                       className="w-full flex items-center space-x-3 px-4 py-2.5 hover:bg-gray-50 transition-colors"
@@ -221,16 +234,6 @@ const BlogArticle = () => {
                 )}
               </div>
             </div>
-
-            {/* Title */}
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-playfair font-bold text-dark-text mb-6">
-              {article.title}
-            </h1>
-
-            {/* Excerpt */}
-            <p className="text-xl text-gray-600 font-montserrat leading-relaxed">
-              {article.excerpt}
-            </p>
           </div>
         </div>
       </motion.div>
