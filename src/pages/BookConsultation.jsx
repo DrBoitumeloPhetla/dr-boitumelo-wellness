@@ -103,9 +103,10 @@ const BookConsultation = () => {
         ? `One Person: R${f2fSingle.toLocaleString()} (${getDuration('face_to_face', 'single')}) | Per Couple: R${f2fCouples.toLocaleString()} (${getDuration('face_to_face', 'couples')})`
         : 'One Person: R2,000 (60 min) | Per Couple: R3,000 (60-90 min)',
       duration: getDuration('face_to_face', 'single'),
-      description: 'An in-person consultation at our Pretoria practice. Includes a 30 minute complimentary virtual feedback session for results and way forward.',
+      description: 'An in-person consultation with Dr. Boitumelo in Pretoria. Includes a 30 minute complimentary virtual feedback session for results and way forward.',
       features: [
-        'Comprehensive physical assessment',
+        'Assessment',
+        'Wellness needs analysis',
         'In-person supplement demonstration',
         'Single & couples sessions available',
         '30 min complimentary virtual feedback session',
@@ -365,7 +366,7 @@ const BookConsultation = () => {
                   <ul className="space-y-3">
                     <li className="flex items-start">
                       <FaCheckCircle className="text-purple-500 mr-3 mt-1 flex-shrink-0" />
-                      <span className="text-gray-600">Comprehensive physical assessment</span>
+                      <span className="text-gray-600">Assessment</span>
                     </li>
                     <li className="flex items-start">
                       <FaCheckCircle className="text-purple-500 mr-3 mt-1 flex-shrink-0" />

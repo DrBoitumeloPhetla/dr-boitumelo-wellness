@@ -339,7 +339,7 @@ const BookingModal = ({ isOpen, onClose }) => {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-gray-800">Face-to-Face Consultation</h3>
-                      <p className="text-gray-600 text-sm mt-1">In-person consultation at the practice. Includes a 30 minute complimentary virtual feedback session for results and way forward.</p>
+                      <p className="text-gray-600 text-sm mt-1">In-person consultation with Dr. Boitumelo. Includes a 30 minute complimentary virtual feedback session for results and way forward.</p>
                       <div className="flex items-center text-gray-500 text-xs mt-1">
                         <FaMapMarkerAlt className="mr-1" />
                         <span>{practiceAddress}</span>
