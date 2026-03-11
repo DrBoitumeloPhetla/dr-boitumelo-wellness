@@ -115,7 +115,7 @@ const VitaminDTalks = () => {
               {/* Poster */}
               <div className="relative group">
                 <img
-                  src="/Vitamin D Webinar Poster.jpeg"
+                  src="/Vitamin D Talks Webinar Poster.jpeg"
                   alt="The Vitamin D Talk - Vitamin D Talks"
                   className="w-full rounded-2xl shadow-2xl"
                 />
