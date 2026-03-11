@@ -61,7 +61,7 @@ const Hero = () => {
               onClick={scrollToProducts}
               className="btn-primary w-full sm:min-w-[200px] text-lg py-4"
             >
-              Shop Supplements
+              Shop Our Products
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.05 }}
