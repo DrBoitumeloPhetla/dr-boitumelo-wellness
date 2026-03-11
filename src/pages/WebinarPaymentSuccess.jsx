@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaCheckCircle, FaEnvelope, FaCalendarAlt, FaClock, FaUserMd } from 'react-icons/fa';
@@ -9,10 +9,12 @@ const WebinarPaymentSuccess = () => {
   const registrationId = searchParams.get('registration_id');
   const [updating, setUpdating] = useState(true);
   const [error, setError] = useState(null);
+  const hasProcessed = useRef(false);
 
   useEffect(() => {
     const updatePayment = async () => {
-      if (registrationId) {
+      if (registrationId && !hasProcessed.current) {
+        hasProcessed.current = true;
         try {
           // Get payment reference from URL if PayFast sends it
           const paymentRef = searchParams.get('pf_payment_id') || `PAY-${Date.now()}`;
@@ -37,7 +39,7 @@ const WebinarPaymentSuccess = () => {
               });
 
               // Trigger confirmation email webhook
-              const confirmationWebhook = import.meta.env.VITE_MAKE_WEBINAR_PAYMENT_WEBHOOK;
+              const confirmationWebhook = import.meta.env.VITE_MAKE_WEBINAR_APPROVAL_WEBHOOK;
               await fetch(confirmationWebhook, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -53,7 +55,7 @@ const WebinarPaymentSuccess = () => {
                   webinarTitle: registration.webinars?.title,
                   webinarDescription: registration.webinars?.description,
                   webinarDate: formattedDate,
-                  webinarTime: '6:00 PM - 6:30 PM SAST',
+                  webinarTime: '19h00 - 20h00 SAST',
                   webinarPrice: registration.webinars?.price,
                   paymentReference: paymentRef,
                   timestamp: new Date().toISOString()

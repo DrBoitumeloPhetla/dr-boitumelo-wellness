@@ -22,10 +22,11 @@ export const generatePayFastData = (orderData) => {
   // Get current site URL
   const siteUrl = window.location.origin;
 
-  // Determine if this is a booking or order
+  // Determine payment type for correct redirect
   const isBooking = order_id.startsWith('BOOK-');
-  const successPath = isBooking ? '/booking/success' : '/payment/success';
-  const cancelPath = isBooking ? '/booking/cancel' : '/payment/cancel';
+  const isWebinar = order_id.startsWith('WEBINAR-');
+  const successPath = isWebinar ? '/webinar/payment/success' : isBooking ? '/booking/success' : '/payment/success';
+  const cancelPath = isWebinar ? '/vitamin-d-talks' : isBooking ? '/booking/cancel' : '/payment/cancel';
 
   // PayFast payment data
   const paymentData = {
@@ -41,14 +42,20 @@ export const generatePayFastData = (orderData) => {
     // Transaction details
     m_payment_id: order_id,
     amount: total.toFixed(2),
-    item_name: isBooking ? `Booking ${order_id}` : `Order ${order_id}`,
-    item_description: isBooking ?
+    item_name: isWebinar ? `Vitamin D Talk - ${items[0]?.name || 'Course Registration'}` : isBooking ? `Booking ${order_id}` : `Order ${order_id}`,
+    item_description: isWebinar ?
+      `Accredited CPD course - Dr. Boitumelo Wellness` :
+      isBooking ?
       `Consultation booking from Dr. Boitumelo Wellness` :
       `${items.length} item(s) from Dr. Boitumelo Wellness`,
 
     // Return URLs (include order_id in success URL for immediate access)
-    return_url: `${siteUrl}${successPath}?order_id=${order_id}`,
-    cancel_url: `${siteUrl}${cancelPath}?order_id=${order_id}`,
+    return_url: isWebinar
+      ? `${siteUrl}${successPath}?registration_id=${order_id.replace('WEBINAR-', '')}`
+      : `${siteUrl}${successPath}?order_id=${order_id}`,
+    cancel_url: isWebinar
+      ? `${siteUrl}${cancelPath}`
+      : `${siteUrl}${cancelPath}?order_id=${order_id}`,
     notify_url: `${siteUrl}/api/payfast/notify`,
 
     // Custom fields

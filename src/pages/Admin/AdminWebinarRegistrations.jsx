@@ -75,8 +75,8 @@ const AdminWebinarRegistrationsContent = () => {
         }
       });
 
-      // Send approval email via Make.com webhook
-      const webhookUrl = import.meta.env.VITE_MAKE_WEBINAR_WEBHOOK;
+      // Send approval data via Make.com webhook
+      const webhookUrl = import.meta.env.VITE_MAKE_WEBINAR_APPROVAL_WEBHOOK;
       if (webhookUrl) {
         try {
           webhooksSentRef.current.add(webhookKey);
@@ -88,21 +88,6 @@ const AdminWebinarRegistrationsContent = () => {
             month: 'long',
             day: 'numeric'
           });
-
-          // Get the Zoom meeting ID based on the month
-          const monthIndex = webinarDate.getMonth(); // 0-indexed (0 = Jan, 1 = Feb, etc.)
-          const zoomMeetingIds = {
-            1: '875 1229 2271',  // February
-            2: '874 6335 4981',  // March
-            3: '851 4358 8043',  // April
-            4: '852 5911 2001',  // May
-            5: '834 6267 8868',  // June
-            6: '891 5156 2265',  // July
-            7: '828 3793 3483',  // August
-            8: '885 1784 8895',  // September
-            9: '821 2969 9822'   // October
-          };
-          const zoomMeetingId = zoomMeetingIds[monthIndex] || 'TBA';
 
           await fetch(webhookUrl, {
             method: 'POST',
@@ -118,9 +103,9 @@ const AdminWebinarRegistrationsContent = () => {
               hpcsaNumber: registration.hpcsa_number,
               webinarTitle: registration.webinars?.title,
               webinarDate: formattedDate,
-              webinarTime: '6:00 PM - 6:30 PM SAST',
-              zoomMeetingId: zoomMeetingId,
-              zoomLink: `https://zoom.us/j/${zoomMeetingId.replace(/\s/g, '')}`,
+              webinarTime: '19h00 - 20h00 SAST',
+              webinarPrice: registration.webinars?.price || 450,
+              paymentStatus: registration.payment_status,
               timestamp: new Date().toISOString()
             })
           });
@@ -177,7 +162,7 @@ const AdminWebinarRegistrationsContent = () => {
       });
 
       // Send rejection email via Make.com webhook
-      const rejectionWebhookUrl = import.meta.env.VITE_MAKE_WEBINAR_REJECTION_WEBHOOK;
+      const rejectionWebhookUrl = import.meta.env.VITE_MAKE_WEBINAR_APPROVAL_WEBHOOK;
       try {
         webhooksSentRef.current.add(webhookKey);
 
