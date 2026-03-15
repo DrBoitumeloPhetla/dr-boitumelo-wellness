@@ -253,7 +253,7 @@ const AdminProductsContent = () => {
     return product.category === selectedCategory;
   });
 
-  const categories = ['all', 'supplements', 'wellness', 'skincare', 'books'];
+  const categories = ['all', 'supplements', 'wellness', 'skincare', 'hair products', 'books'];
 
   return (
     <div>
@@ -511,6 +511,8 @@ const AdminProductsContent = () => {
                         <option value="Nutrition">Nutrition</option>
                         <option value="Brain Health">Brain Health</option>
                         <option value="Reproductive Health">Reproductive Health</option>
+                        <option value="Hair Products">Hair Products</option>
+                        <option value="Skincare">Skincare</option>
                       </select>
                     </div>
                     <div>
