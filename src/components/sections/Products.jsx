@@ -51,7 +51,7 @@ const Products = () => {
 
   const categories = [
     'All',
-    ...new Set(products.map((p) => p.category)),
+    ...new Set([...products.map((p) => p.category), 'Hair Products', 'Skincare']),
   ];
 
   const filteredProducts =
@@ -154,7 +154,7 @@ const Products = () => {
           className="text-center mb-12"
         >
           <h2 className="heading-secondary text-primary-green mb-4">
-            Premium Supplements
+            Premium Supplements & Products
           </h2>
           <div className="w-20 h-1 bg-gold mx-auto mb-6" />
           <p className="text-body max-w-2xl mx-auto">

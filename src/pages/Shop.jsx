@@ -116,7 +116,7 @@ const Shop = () => {
 
   const categories = [
     'All',
-    ...new Set(products.map((p) => p.category)),
+    ...new Set([...products.map((p) => p.category), 'Hair Products', 'Skincare']),
   ];
 
   const filteredProducts =
@@ -193,7 +193,7 @@ const Shop = () => {
             transition={{ duration: 0.6 }}
             className="text-center max-w-3xl mx-auto"
           >
-            <h1 className="heading-primary text-white mb-4">Shop Premium Supplements</h1>
+            <h1 className="heading-primary text-white mb-4">Shop Our Premium Supplements & Products</h1>
             <div className="w-20 h-1 bg-gold mx-auto mb-6" />
             <p className="text-lg md:text-xl text-white/90">
               Science-backed formulations designed to support your wellness journey with the highest quality natural ingredients
