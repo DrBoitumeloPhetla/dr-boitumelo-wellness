@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { FaEnvelope, FaPhone, FaLinkedin } from 'react-icons/fa';
+import { FaEnvelope, FaPhone } from 'react-icons/fa';
 
 const Team = () => {
   const [ref, inView] = useInView({
@@ -48,15 +48,6 @@ const Team = () => {
       bio: 'Specializes in functional training, strength conditioning, and habit coaching with 10 years of experience helping clients achieve their fitness goals.',
       email: 'info@jsfitnesssa.com',
       phone: '+27837634138',
-    },
-    {
-      name: 'Potlako Moloya',
-      role: 'Wellness Manager',
-      image: '/Potlako Moloya.jpg',
-      qualifications: ['Somatology', 'Pharmaceutical Science Advanced Diploma'],
-      bio: 'Manages wellness operations and ensures clients receive the highest quality care and personalized attention.',
-      email: 'sales@drboitumelowellness.co.za',
-      phone: '',
     },
     {
       name: 'Basetsana Motlhamme',
@@ -209,8 +200,6 @@ const Team = () => {
                     className={`w-full h-full group-hover:scale-105 transition-transform duration-500 ${
                       member.name === 'Dr. Nontobeko Mbatha'
                         ? 'object-cover object-top'
-                        : member.name === 'Potlako Moloya'
-                        ? 'object-cover object-[center_15%] scale-[1.35]'
                         : member.name === 'Basetsana Motlhamme'
                         ? 'object-cover object-top'
                         : member.name === 'Lerato Mampuru'
