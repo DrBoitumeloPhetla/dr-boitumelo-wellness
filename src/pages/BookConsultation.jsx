@@ -105,7 +105,7 @@ const BookConsultation = () => {
       duration: getDuration('face_to_face', 'single'),
       description: 'An in-person consultation with Dr. Boitumelo in Pretoria. Includes a 30 minute complimentary virtual feedback session for results and way forward.',
       features: [
-        'Assessment',
+        'Assessment Data',
         'Wellness needs analysis',
         'In-person supplement demonstration',
         'Single & couples sessions available',
