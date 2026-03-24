@@ -51,7 +51,7 @@ export const generatePayFastData = (orderData) => {
 
     // Return URLs (include order_id in success URL for immediate access)
     return_url: isWebinar
-      ? `${siteUrl}${successPath}?registration_id=${order_id.replace('WEBINAR-', '')}`
+      ? `${siteUrl}${successPath}?payment_id=${order_id}`
       : `${siteUrl}${successPath}?order_id=${order_id}`,
     cancel_url: isWebinar
       ? `${siteUrl}${cancelPath}`

@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaCalendarAlt, FaClock, FaUserMd, FaCheckCircle, FaAward, FaLock } from 'react-icons/fa';
-import { createWebinarRegistration, checkExistingWebinarRegistration } from '../../lib/supabase';
+import { checkExistingWebinarRegistration } from '../../lib/supabase';
 import { redirectToPayFast } from '../../lib/payfast';
 
 const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
   const [formData, setFormData] = useState({
+    title: '',
     firstName: '',
     lastName: '',
     email: '',
@@ -34,7 +35,7 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
     e.preventDefault();
     setError('');
 
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.profession || !formData.hpcsaNumber) {
+    if (!formData.title || !formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.profession || !formData.hpcsaNumber) {
       setError('Please fill in all required fields');
       return;
     }
@@ -66,49 +67,25 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
         return;
       }
 
-      // Create registration with pending payment
-      const registration = await createWebinarRegistration({
+      // Store form data in localStorage - registration will be created after payment
+      localStorage.setItem('pendingWebinarRegistration', JSON.stringify({
         webinarId: webinar.id,
+        title: formData.title,
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         phone: formData.phone,
         profession: formData.profession,
         hpcsaNumber: formData.hpcsaNumber.toUpperCase().replace(/\s/g, ''),
-        paymentStatus: 'pending'
-      });
+        webinarTitle: webinar.title,
+        webinarDate: webinar.date,
+        webinarPrice: webinar.price,
+      }));
 
-      // Trigger Make.com webhook for new registration
-      const webhookUrl = import.meta.env.VITE_MAKE_WEBINAR_APPROVAL_WEBHOOK;
-      if (webhookUrl) {
-        try {
-          await fetch(webhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              type: 'webinar_registration',
-              registrationId: registration.id,
-              firstName: formData.firstName,
-              lastName: formData.lastName,
-              email: formData.email,
-              phone: formData.phone,
-              profession: formData.profession,
-              hpcsaNumber: formData.hpcsaNumber.toUpperCase(),
-              webinarTitle: webinar.title,
-              webinarDate: webinar.date,
-              webinarPrice: webinar.price,
-              isFree: false,
-              timestamp: new Date().toISOString()
-            })
-          });
-        } catch (webhookError) {
-          console.error('Webhook error:', webhookError);
-        }
-      }
-
-      // Redirect to PayFast for payment
+      // Redirect to PayFast for payment (no registration created yet)
+      const tempOrderId = `WEBINAR-PENDING-${Date.now()}`;
       redirectToPayFast({
-        order_id: `WEBINAR-${registration.id}`,
+        order_id: tempOrderId,
         customer_name: `${formData.firstName} ${formData.lastName}`,
         customer_email: formData.email,
         total: webinar.price,
@@ -125,6 +102,7 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
 
   const handleClose = () => {
     setFormData({
+      title: '',
       firstName: '',
       lastName: '',
       email: '',
@@ -215,6 +193,29 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
 
                   {/* Form */}
                   <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Title <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        name="title"
+                        value={formData.title}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent bg-white"
+                      >
+                        <option value="">Select your title</option>
+                        <option value="Prof.">Prof.</option>
+                        <option value="Dr.">Dr.</option>
+                        <option value="Clinical Associate">Clinical Associate</option>
+                        <option value="Nurse">Nurse</option>
+                        <option value="Mr.">Mr.</option>
+                        <option value="Mrs.">Mrs.</option>
+                        <option value="Miss">Miss</option>
+                        <option value="Ms.">Ms.</option>
+                      </select>
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -343,7 +344,7 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
                     <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Name:</span>
-                        <span className="font-semibold">{formData.firstName} {formData.lastName}</span>
+                        <span className="font-semibold">{formData.title} {formData.firstName} {formData.lastName}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Email:</span>

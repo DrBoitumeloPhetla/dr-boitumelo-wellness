@@ -2,80 +2,94 @@ import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaCheckCircle, FaEnvelope, FaCalendarAlt, FaClock, FaUserMd } from 'react-icons/fa';
-import { updateWebinarRegistrationPayment, getWebinarRegistrationById } from '../lib/supabase';
+import { createWebinarRegistration } from '../lib/supabase';
 
 const WebinarPaymentSuccess = () => {
   const [searchParams] = useSearchParams();
-  const registrationId = searchParams.get('registration_id');
   const [updating, setUpdating] = useState(true);
   const [error, setError] = useState(null);
   const hasProcessed = useRef(false);
 
   useEffect(() => {
-    const updatePayment = async () => {
-      if (registrationId && !hasProcessed.current) {
-        hasProcessed.current = true;
-        try {
-          // Get payment reference from URL if PayFast sends it
-          const paymentRef = searchParams.get('pf_payment_id') || `PAY-${Date.now()}`;
+    const processRegistration = async () => {
+      if (hasProcessed.current) return;
+      hasProcessed.current = true;
 
-          await updateWebinarRegistrationPayment(registrationId, {
-            status: 'paid',
-            reference: paymentRef
-          });
-          console.log('Payment status updated successfully');
-
-          // Fetch full registration details for confirmation email
-          try {
-            const registration = await getWebinarRegistrationById(registrationId);
-
-            if (registration) {
-              const webinarDate = new Date(registration.webinars?.date);
-              const formattedDate = webinarDate.toLocaleDateString('en-ZA', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              });
-
-              // Trigger confirmation email webhook
-              const confirmationWebhook = import.meta.env.VITE_MAKE_WEBINAR_APPROVAL_WEBHOOK;
-              await fetch(confirmationWebhook, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  type: 'webinar_payment_confirmed',
-                  registrationId: registrationId,
-                  firstName: registration.first_name,
-                  lastName: registration.last_name,
-                  email: registration.email,
-                  phone: registration.phone,
-                  profession: registration.profession,
-                  hpcsaNumber: registration.hpcsa_number,
-                  webinarTitle: registration.webinars?.title,
-                  webinarDescription: registration.webinars?.description,
-                  webinarDate: formattedDate,
-                  webinarTime: '19h00 - 20h00 SAST',
-                  webinarPrice: registration.webinars?.price,
-                  paymentReference: paymentRef,
-                  timestamp: new Date().toISOString()
-                })
-              });
-              console.log('Payment confirmation webhook triggered');
-            }
-          } catch (webhookErr) {
-            console.error('Confirmation webhook error:', webhookErr);
-          }
-        } catch (err) {
-          console.error('Error updating payment status:', err);
-          setError('Payment received but status update failed. Please contact support.');
+      try {
+        // Get pending registration data from localStorage
+        const pendingData = localStorage.getItem('pendingWebinarRegistration');
+        if (!pendingData) {
+          setError('Registration data not found. If you completed payment, please contact support.');
+          setUpdating(false);
+          return;
         }
+
+        const regData = JSON.parse(pendingData);
+        const paymentRef = searchParams.get('pf_payment_id') || `PAY-${Date.now()}`;
+
+        // NOW create the registration in Supabase (only after payment)
+        const registration = await createWebinarRegistration({
+          webinarId: regData.webinarId,
+          firstName: regData.firstName,
+          lastName: regData.lastName,
+          email: regData.email,
+          phone: regData.phone,
+          profession: regData.profession,
+          hpcsaNumber: regData.hpcsaNumber,
+          paymentStatus: 'paid'
+        });
+
+        // Format date for the webhook
+        const webinarDate = new Date(regData.webinarDate);
+        const formattedDate = webinarDate.toLocaleDateString('en-ZA', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+
+        // Trigger payment confirmed webhook
+        const webhookUrl = import.meta.env.VITE_MAKE_WEBINAR_APPROVAL_WEBHOOK;
+        if (webhookUrl) {
+          try {
+            await fetch(webhookUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'webinar_payment_confirmed',
+                registrationId: registration.id,
+                title: regData.title,
+                firstName: regData.firstName,
+                lastName: regData.lastName,
+                email: regData.email,
+                phone: regData.phone,
+                profession: regData.profession,
+                hpcsaNumber: regData.hpcsaNumber,
+                webinarTitle: regData.webinarTitle,
+                webinarDate: formattedDate,
+                webinarTime: '19h00 - 20h00 SAST',
+                webinarPrice: regData.webinarPrice,
+                paymentReference: paymentRef,
+                timestamp: new Date().toISOString()
+              })
+            });
+          } catch (webhookErr) {
+            console.error('Webhook error:', webhookErr);
+          }
+        }
+
+        // Clear pending data
+        localStorage.removeItem('pendingWebinarRegistration');
+
+      } catch (err) {
+        console.error('Error creating registration:', err);
+        setError('Payment received but registration failed. Please contact support.');
       }
       setUpdating(false);
     };
 
-    updatePayment();
-  }, [registrationId, searchParams]);
+    processRegistration();
+  }, [searchParams]);
 
   if (updating) {
     return (
