@@ -194,8 +194,8 @@ const CartModal = () => {
 
   // Calculate total shipping cost for all items in cart
   const getShippingTotal = () => {
-    // Flat shipping rate of R168 for all orders
-    return cartItems.length > 0 ? 168 : 0;
+    // Flat shipping rate of R199 for all orders
+    return cartItems.length > 0 ? 199 : 0;
   };
 
   // Calculate grand total (cart total + shipping - coupon discount)
