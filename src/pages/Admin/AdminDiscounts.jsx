@@ -232,8 +232,6 @@ const AdminDiscountsContent = () => {
         return `R${discount.discount_value} OFF`;
       case 'buy_x_get_y':
         return `Buy ${discount.buy_quantity} Get ${discount.get_quantity} Free`;
-      case 'free_shipping':
-        return 'FREE SHIPPING';
       default:
         return 'DISCOUNT';
     }
@@ -428,7 +426,6 @@ const AdminDiscountsContent = () => {
                       <option value="percentage">Percentage Off (%)</option>
                       <option value="fixed_amount">Fixed Amount Off (R)</option>
                       <option value="buy_x_get_y">Buy X Get Y Free</option>
-                      <option value="free_shipping">Free Shipping</option>
                     </select>
                   </div>
 
