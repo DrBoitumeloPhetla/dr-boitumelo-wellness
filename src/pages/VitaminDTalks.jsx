@@ -29,13 +29,13 @@ const VitaminDTalks = () => {
   const [webinar, setWebinar] = useState(FALLBACK_WEBINAR);
 
   // Load the webinar from Supabase to get the real database ID
-  // We only need the ID for registration — all display data stays hardcoded
+  // We only need the ID for registration — all display data stays hardcoded.
+  // This is a recurring monthly event, so we match by title (not date).
   useEffect(() => {
     const loadWebinar = async () => {
       try {
         const webinars = await getAllWebinars();
-        // Only match the exact March 26 2026 webinar
-        const match = webinars?.find(w => w.date === '2026-03-26');
+        const match = webinars?.find(w => w.title?.toLowerCase().includes('vitamin d'));
         if (match) {
           setWebinar({
             ...FALLBACK_WEBINAR,
@@ -48,8 +48,6 @@ const VitaminDTalks = () => {
     };
     loadWebinar();
   }, []);
-
-  const isUpcoming = new Date(webinar.date) > new Date();
 
 
   return (
@@ -83,7 +81,7 @@ const VitaminDTalks = () => {
             <div className="grid grid-cols-2 md:flex md:flex-wrap md:justify-center gap-2 md:gap-4 text-xs md:text-sm">
               <div className="flex items-center gap-2 bg-white/10 px-3 md:px-4 py-2 rounded-lg justify-center">
                 <FaCalendarAlt className="text-gold flex-shrink-0" />
-                <span>26 March 2026</span>
+                <span>Monthly Sessions</span>
               </div>
               <div className="flex items-center gap-2 bg-white/10 px-3 md:px-4 py-2 rounded-lg justify-center">
                 <FaClock className="text-gold flex-shrink-0" />
@@ -140,8 +138,8 @@ const VitaminDTalks = () => {
                 <div className="grid grid-cols-2 gap-3 md:gap-4 mb-5 md:mb-6">
                   <div className="bg-white rounded-xl p-3 md:p-4 shadow-md text-center">
                     <FaCalendarAlt className="text-xl md:text-2xl text-primary-green mx-auto mb-1.5" />
-                    <p className="text-xs md:text-sm text-gray-500">Date</p>
-                    <p className="font-bold text-dark-text text-sm md:text-base">26 March 2026</p>
+                    <p className="text-xs md:text-sm text-gray-500">Schedule</p>
+                    <p className="font-bold text-dark-text text-sm md:text-base">Monthly</p>
                   </div>
                   <div className="bg-white rounded-xl p-3 md:p-4 shadow-md text-center">
                     <FaClock className="text-xl md:text-2xl text-primary-green mx-auto mb-1.5" />
@@ -161,18 +159,15 @@ const VitaminDTalks = () => {
                 </div>
 
                 {/* Register Button */}
-                {isUpcoming ? (
-                  <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="w-full px-8 py-4 bg-primary-green text-white rounded-xl font-bold text-lg hover:bg-green-dark transition-colors shadow-lg hover:shadow-xl"
-                  >
-                    Register Now - R450
-                  </button>
-                ) : (
-                  <div className="w-full px-8 py-4 bg-gray-400 text-white rounded-xl font-bold text-lg text-center">
-                    This event has passed
-                  </div>
-                )}
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="w-full px-8 py-4 bg-primary-green text-white rounded-xl font-bold text-lg hover:bg-green-dark transition-colors shadow-lg hover:shadow-xl"
+                >
+                  Register Now - R450
+                </button>
+                <p className="text-center text-sm text-gray-500 mt-3">
+                  Sessions run monthly. The exact date is confirmed after registration.
+                </p>
               </div>
             </motion.div>
           </div>
@@ -220,7 +215,7 @@ const VitaminDTalks = () => {
                     </div>
                     <div className="text-center">
                       <p className="text-white text-lg md:text-xl font-bold font-montserrat">Watch the Invitation</p>
-                      <p className="text-white/60 text-sm mt-1">The Vitamin D Talk - 26 March 2026</p>
+                      <p className="text-white/60 text-sm mt-1">The Vitamin D Talk</p>
                     </div>
                   </div>
 
@@ -349,20 +344,14 @@ const VitaminDTalks = () => {
               Join fellow healthcare practitioners for this accredited Vitamin D presentation.
             </p>
             <p className="text-white/80 mb-8">
-              26 March 2026 &bull; 19h00 - 20h00 &bull; Zoom &bull; R450 &bull; 1 CPD Point
+              Monthly &bull; 19h00 - 20h00 &bull; Zoom &bull; R450 &bull; 1 CPD Point
             </p>
-            {isUpcoming ? (
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="inline-block px-8 py-4 bg-gold text-white rounded-xl font-bold text-lg hover:bg-gold-dark transition-colors shadow-lg"
-              >
-                Register Now
-              </button>
-            ) : (
-              <span className="inline-block px-8 py-4 bg-white/20 text-white rounded-xl font-bold text-lg">
-                This event has passed
-              </span>
-            )}
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="inline-block px-8 py-4 bg-gold text-white rounded-xl font-bold text-lg hover:bg-gold-dark transition-colors shadow-lg"
+            >
+              Register Now
+            </button>
           </motion.div>
         </div>
       </section>

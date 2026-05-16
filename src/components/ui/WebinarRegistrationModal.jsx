@@ -115,15 +115,6 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
     onClose();
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-ZA', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
 
   if (!webinar) return null;
 
@@ -165,7 +156,7 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
                 <div className="flex items-center gap-4 text-sm text-gray-700 flex-wrap">
                   <div className="flex items-center gap-2">
                     <FaCalendarAlt className="text-primary-green" />
-                    <span>{formatDate(webinar.date)}</span>
+                    <span>Monthly &bull; Date confirmed after registration</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <FaClock className="text-primary-green" />
