@@ -925,7 +925,7 @@ const AdminAppointmentsContent = () => {
                       <span className="font-medium text-gray-900 truncate">{appointment.customer_name}</span>
                     </div>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize flex-shrink-0 ml-2 ${getStatusBadge(appointment.appointment_status)}`}>
-                      {appointment.appointment_status.replace('_', ' ')}
+                      {(appointment.appointment_status || 'unknown').replace('_', ' ')}
                     </span>
                   </div>
 
@@ -952,7 +952,7 @@ const AdminAppointmentsContent = () => {
                     </span>
                     <span className="text-gray-300">|</span>
                     <FaClock className="text-xs text-gray-400" />
-                    <span>{appointment.start_time.substring(0, 5)} - {appointment.end_time.substring(0, 5)}</span>
+                    <span>{(appointment.start_time || '').substring(0, 5)} - {(appointment.end_time || '').substring(0, 5)}</span>
                   </div>
 
                   {/* Contact info */}
@@ -1063,7 +1063,7 @@ const AdminAppointmentsContent = () => {
                           </div>
                           <div className="text-gray-500 flex items-center gap-1 mt-1">
                             <FaClock className="text-xs" />
-                            {appointment.start_time.substring(0, 5)} - {appointment.end_time.substring(0, 5)}
+                            {(appointment.start_time || '').substring(0, 5)} - {(appointment.end_time || '').substring(0, 5)}
                           </div>
                         </div>
                       </td>
@@ -1074,7 +1074,7 @@ const AdminAppointmentsContent = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadge(appointment.appointment_status)}`}>
-                          {appointment.appointment_status.replace('_', ' ')}
+                          {(appointment.appointment_status || 'unknown').replace('_', ' ')}
                         </span>
                       </td>
                       <td className="px-6 py-4">
