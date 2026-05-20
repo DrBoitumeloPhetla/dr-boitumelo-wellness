@@ -46,7 +46,9 @@ const AdminLayoutInner = ({ children }) => {
     navigate('/admin/login');
   };
 
-  // Mark page as visited when location changes
+  // Mark page as visited when location changes.
+  // markAsVisited is async (writes to Supabase) so we await before refreshing
+  // counts — otherwise the refresh races the upsert and the badge flickers back.
   useEffect(() => {
     const pageMap = {
       '/admin/orders': 'orders',
@@ -60,11 +62,12 @@ const AdminLayoutInner = ({ children }) => {
 
     const pageName = pageMap[location.pathname];
     if (pageName) {
-      markAsVisited(pageName);
-      // Refresh counts after marking as visited
-      setTimeout(refreshCounts, 100);
+      (async () => {
+        await markAsVisited(pageName);
+        refreshCounts();
+      })();
     }
-  }, [location.pathname]);
+  }, [location.pathname, markAsVisited, refreshCounts]);
 
   // Role badge styling
   const roleBadgeClass = isSuperAdmin()

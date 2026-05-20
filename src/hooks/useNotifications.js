@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+
+const EPOCH = new Date(0).toISOString();
 
 export const useNotifications = () => {
   const [counts, setCounts] = useState({
@@ -12,90 +14,108 @@ export const useNotifications = () => {
     webinarRegistrations: 0,
   });
 
-  const getLastVisited = (page) => {
-    const timestamp = localStorage.getItem(`lastVisited_${page}`);
-    return timestamp || new Date(0).toISOString(); // Return epoch if never visited
-  };
-
-  const markAsVisited = (page) => {
-    localStorage.setItem(`lastVisited_${page}`, new Date().toISOString());
-  };
-
-  const fetchCounts = async () => {
+  // Fetch the shared "last viewed" timestamps from Supabase.
+  // Returns a map { page: ISO timestamp }. Missing pages fall back to epoch.
+  const fetchLastViewedMap = async () => {
     try {
-      const lastVisitedOrders = getLastVisited('orders');
-      const lastVisitedContacts = getLastVisited('contacts');
-      const lastVisitedReviews = getLastVisited('reviews');
-      const lastVisitedClients = getLastVisited('clients');
-      const lastVisitedPrescriptions = getLastVisited('prescription-requests');
-      const lastVisitedConsultations = getLastVisited('appointments');
-      const lastVisitedWebinars = getLastVisited('webinar-registrations');
+      const { data, error } = await supabase
+        .from('admin_notification_views')
+        .select('page, last_viewed_at');
 
-      // Fetch new orders count
-      const { count: ordersCount } = await supabase
-        .from('orders')
-        .select('*', { count: 'exact', head: true })
-        .gt('created_at', lastVisitedOrders);
+      if (error) {
+        console.error('Failed to load notification view timestamps:', error.message);
+        return {};
+      }
 
-      // Fetch new contacts count
-      const { count: contactsCount } = await supabase
-        .from('contacts')
-        .select('*', { count: 'exact', head: true })
-        .gt('created_at', lastVisitedContacts);
+      const map = {};
+      (data || []).forEach((row) => {
+        map[row.page] = row.last_viewed_at;
+      });
+      return map;
+    } catch (err) {
+      console.error('Unexpected error loading notification timestamps:', err);
+      return {};
+    }
+  };
 
-      // Fetch new reviews count
-      const { count: reviewsCount } = await supabase
-        .from('reviews')
-        .select('*', { count: 'exact', head: true })
-        .gt('created_at', lastVisitedReviews);
+  const getLastViewed = (map, page) => map[page] || EPOCH;
 
-      // Fetch new clients count (customers who made purchases)
-      const { count: clientsCount } = await supabase
-        .from('orders')
-        .select('*', { count: 'exact', head: true })
-        .gt('created_at', lastVisitedClients);
+  // Shared write: any admin viewing the page clears the badge for everyone.
+  const markAsVisited = useCallback(async (page) => {
+    try {
+      await supabase
+        .from('admin_notification_views')
+        .upsert(
+          { page, last_viewed_at: new Date().toISOString() },
+          { onConflict: 'page' }
+        );
+    } catch (err) {
+      console.error(`Failed to mark page "${page}" as visited:`, err);
+    }
+  }, []);
 
-      // Fetch new prescription requests count
-      const { count: prescriptionsCount } = await supabase
-        .from('prescription_requests')
-        .select('*', { count: 'exact', head: true })
-        .gt('created_at', lastVisitedPrescriptions);
+  const fetchCounts = useCallback(async () => {
+    try {
+      const lastViewed = await fetchLastViewedMap();
 
-      // Fetch new consultation appointments count
-      const { count: consultationsCount } = await supabase
-        .from('consultation_appointments')
-        .select('*', { count: 'exact', head: true })
-        .gt('created_at', lastVisitedConsultations);
-
-      // Fetch new webinar registrations count
-      const { count: webinarRegistrationsCount } = await supabase
-        .from('webinar_registrations')
-        .select('*', { count: 'exact', head: true })
-        .gt('created_at', lastVisitedWebinars);
+      const [
+        ordersResult,
+        contactsResult,
+        reviewsResult,
+        clientsResult,
+        prescriptionsResult,
+        consultationsResult,
+        webinarResult,
+      ] = await Promise.all([
+        supabase
+          .from('orders')
+          .select('*', { count: 'exact', head: true })
+          .gt('created_at', getLastViewed(lastViewed, 'orders')),
+        supabase
+          .from('contacts')
+          .select('*', { count: 'exact', head: true })
+          .gt('created_at', getLastViewed(lastViewed, 'contacts')),
+        supabase
+          .from('reviews')
+          .select('*', { count: 'exact', head: true })
+          .gt('created_at', getLastViewed(lastViewed, 'reviews')),
+        supabase
+          .from('orders')
+          .select('*', { count: 'exact', head: true })
+          .gt('created_at', getLastViewed(lastViewed, 'clients')),
+        supabase
+          .from('prescription_requests')
+          .select('*', { count: 'exact', head: true })
+          .gt('created_at', getLastViewed(lastViewed, 'prescription-requests')),
+        supabase
+          .from('consultation_appointments')
+          .select('*', { count: 'exact', head: true })
+          .gt('created_at', getLastViewed(lastViewed, 'appointments')),
+        supabase
+          .from('webinar_registrations')
+          .select('*', { count: 'exact', head: true })
+          .gt('created_at', getLastViewed(lastViewed, 'webinar-registrations')),
+      ]);
 
       setCounts({
-        orders: ordersCount || 0,
-        contacts: contactsCount || 0,
-        reviews: reviewsCount || 0,
-        clients: clientsCount || 0,
-        prescriptionRequests: prescriptionsCount || 0,
-        consultations: consultationsCount || 0,
-        webinarRegistrations: webinarRegistrationsCount || 0,
+        orders: ordersResult.count || 0,
+        contacts: contactsResult.count || 0,
+        reviews: reviewsResult.count || 0,
+        clients: clientsResult.count || 0,
+        prescriptionRequests: prescriptionsResult.count || 0,
+        consultations: consultationsResult.count || 0,
+        webinarRegistrations: webinarResult.count || 0,
       });
     } catch (error) {
       console.error('Error fetching notification counts:', error);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    // Fetch counts on mount
     fetchCounts();
-
-    // Refresh counts every 30 seconds
     const interval = setInterval(fetchCounts, 30000);
-
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchCounts]);
 
   return {
     counts,
