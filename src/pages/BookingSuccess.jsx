@@ -1,115 +1,130 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaCheckCircle, FaHome, FaCalendarAlt, FaVideo, FaPhone, FaUserMd, FaMapMarkerAlt, FaClock, FaEnvelope } from 'react-icons/fa';
-import { createConsultationBooking, triggerMakeWebhook } from '../lib/supabase';
+import {
+  getConsultationBookingByBookingId,
+  updateConsultationBookingPaymentStatus,
+  triggerMakeWebhook,
+} from '../lib/supabase';
 import { sendFaceToFaceBooking } from '../lib/makeWebhooks';
 
 const BookingSuccess = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [bookingData, setBookingData] = useState(null);
   const [appointmentSaved, setAppointmentSaved] = useState(false);
   const [error, setError] = useState(null);
-  const appointmentSavedRef = useRef(false);
+  const processedRef = useRef(false);
 
-  // Save appointment data to database on mount
   useEffect(() => {
-    const saveAppointment = async () => {
-      // Prevent double-saving
-      if (appointmentSavedRef.current) return;
+    const confirmAppointment = async () => {
+      if (processedRef.current) return;
+      processedRef.current = true;
 
-      const pendingBooking = localStorage.getItem('pendingBooking');
-      if (pendingBooking) {
-        try {
-          appointmentSavedRef.current = true;
-          const data = JSON.parse(pendingBooking);
-          setBookingData(data);
+      const bookingId = searchParams.get('order_id') || searchParams.get('m_payment_id');
 
-          // Face-to-face without time slot: send to n8n webhook (TEMPORARY)
-          const isFaceToFaceNoSlot = data.consultation_type === 'face_to_face' && !data.appointment_date;
+      if (!bookingId) {
+        setError('No booking reference found. Please contact support.');
+        return;
+      }
 
-          // Create the appointment in the database
-          await createConsultationBooking({
-            bookingId: data.booking_id,
-            customerName: data.customer_name,
-            customerEmail: data.customer_email,
-            customerPhone: data.customer_phone,
-            consultationType: data.consultation_type,
-            appointmentDate: data.appointment_date || null,
-            startTime: data.start_time || null,
-            endTime: data.end_time || null,
-            price: data.consultation_price,
-            paymentStatus: 'paid',
-            location: data.location,
-            reservationId: data.reservation_id || null
-          });
-
-          console.log('Appointment saved:', data);
+      // Idempotency guard across reloads/redirects in the same session.
+      const processedKey = `booking_processed_${bookingId}`;
+      if (sessionStorage.getItem(processedKey)) {
+        const booking = await getConsultationBookingByBookingId(bookingId);
+        if (booking) {
+          setBookingData(booking);
           setAppointmentSaved(true);
-
-          if (isFaceToFaceNoSlot) {
-            // Send to n8n for face-to-face (triggers patient + doctor emails)
-            await sendFaceToFaceBooking(data);
-          } else {
-            // Trigger webhook for new appointment confirmation email
-            await triggerMakeWebhook('created', {
-              id: data.booking_id,
-              customer_name: data.customer_name,
-              customer_email: data.customer_email,
-              customer_phone: data.customer_phone,
-              consultation_type: data.consultation_type,
-              session_type: data.session_type || null,
-              appointment_date: data.appointment_date,
-              start_time: data.start_time,
-              end_time: data.end_time,
-              price: data.consultation_price,
-              location: data.location,
-              appointment_status: 'scheduled'
-            });
-          }
-
-          // Clear the pending booking from localStorage
-          localStorage.removeItem('pendingBooking');
-        } catch (err) {
-          console.error('Error saving appointment:', err);
-          setError('There was an issue confirming your appointment. Please contact support.');
-          appointmentSavedRef.current = false;
         }
-      } else {
-        // No pending booking - payment went through but data not in localStorage (e.g. mobile browser context switch)
-        // Success header is still shown since PayFast redirected here after successful payment
+        return;
+      }
+
+      try {
+        const booking = await getConsultationBookingByBookingId(bookingId);
+
+        if (!booking) {
+          setError(
+            'We could not find your booking. Please contact support with reference: ' +
+              bookingId
+          );
+          return;
+        }
+
+        setBookingData(booking);
+
+        // If the ITN webhook already flipped this to paid, just show success.
+        if (booking.payment_status === 'paid') {
+          setAppointmentSaved(true);
+          sessionStorage.setItem(processedKey, 'true');
+          return;
+        }
+
+        await updateConsultationBookingPaymentStatus(bookingId, 'paid');
+
+        const isFaceToFaceNoSlot =
+          booking.consultation_type === 'face_to_face' && !booking.appointment_date;
+
+        if (isFaceToFaceNoSlot) {
+          await sendFaceToFaceBooking({
+            booking_id: booking.booking_id,
+            customer_name: booking.customer_name,
+            customer_email: booking.customer_email,
+            customer_phone: booking.customer_phone,
+            consultation_type: booking.consultation_type,
+            consultation_price: booking.price,
+            location: booking.location,
+          });
+        } else {
+          await triggerMakeWebhook('created', {
+            id: booking.booking_id,
+            customer_name: booking.customer_name,
+            customer_email: booking.customer_email,
+            customer_phone: booking.customer_phone,
+            consultation_type: booking.consultation_type,
+            appointment_date: booking.appointment_date,
+            start_time: booking.start_time,
+            end_time: booking.end_time,
+            price: booking.price,
+            location: booking.location,
+            appointment_status: 'scheduled',
+          });
+        }
+
+        setAppointmentSaved(true);
+        sessionStorage.setItem(processedKey, 'true');
+        localStorage.removeItem('pendingBookingMeta');
+      } catch (err) {
+        console.error('Error confirming appointment:', err);
+        setError('There was an issue confirming your appointment. Please contact support.');
+        processedRef.current = false;
       }
     };
 
-    saveAppointment();
-  }, []);
+    confirmAppointment();
+  }, [searchParams]);
 
-  // Get consultation type display info
   const getConsultationInfo = (type) => {
     const info = {
       'virtual': {
         name: 'Virtual Consultation',
         icon: <FaVideo className="text-2xl text-green-600" />,
         iconBg: 'bg-green-100',
-        description: 'Video call consultation'
       },
       'telephonic': {
         name: 'Telephonic Consultation',
         icon: <FaPhone className="text-2xl text-blue-600" />,
         iconBg: 'bg-blue-100',
-        description: 'Phone call consultation'
       },
       'face_to_face': {
         name: 'Face-to-Face Consultation',
         icon: <FaUserMd className="text-2xl text-purple-600" />,
         iconBg: 'bg-purple-100',
-        description: 'In-person consultation'
       }
     };
     return info[type] || info['virtual'];
   };
 
-  // Format date for display
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -124,7 +139,6 @@ const BookingSuccess = () => {
   return (
     <div className="min-h-screen bg-cream p-4 pt-24">
       <div className="max-w-2xl mx-auto">
-        {/* Success Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -146,7 +160,6 @@ const BookingSuccess = () => {
           </p>
         </motion.div>
 
-        {/* Error Message */}
         {error && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -157,7 +170,6 @@ const BookingSuccess = () => {
           </motion.div>
         )}
 
-        {/* Appointment Details */}
         {bookingData && appointmentSaved && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -173,7 +185,6 @@ const BookingSuccess = () => {
             </div>
 
             <div className="p-6">
-              {/* Consultation Type */}
               <div className="flex items-center space-x-4 mb-6 pb-6 border-b">
                 <div className={`${getConsultationInfo(bookingData.consultation_type).iconBg} p-4 rounded-full`}>
                   {getConsultationInfo(bookingData.consultation_type).icon}
@@ -182,13 +193,9 @@ const BookingSuccess = () => {
                   <h3 className="font-bold text-lg text-gray-800">
                     {getConsultationInfo(bookingData.consultation_type).name}
                   </h3>
-                  <p className="text-gray-500 text-sm">
-                    {bookingData.session_type === 'couples' ? 'Couples session' : 'Individual session'}
-                  </p>
                 </div>
               </div>
 
-              {/* Details Grid */}
               <div className="space-y-4">
                 {bookingData.appointment_date ? (
                   <>
@@ -204,7 +211,9 @@ const BookingSuccess = () => {
                       <FaClock className="text-gray-400 w-5" />
                       <div>
                         <p className="text-sm text-gray-500">Time</p>
-                        <p className="font-medium text-gray-800">{bookingData.start_time} - {bookingData.end_time}</p>
+                        <p className="font-medium text-gray-800">
+                          {(bookingData.start_time || '').substring(0, 5)} - {(bookingData.end_time || '').substring(0, 5)}
+                        </p>
                       </div>
                     </div>
                   </>
@@ -239,7 +248,7 @@ const BookingSuccess = () => {
                 <div className="mt-4 pt-4 border-t">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Amount Paid</span>
-                    <span className="text-2xl font-bold text-green-600">R{bookingData.consultation_price}</span>
+                    <span className="text-2xl font-bold text-green-600">R{bookingData.price}</span>
                   </div>
                 </div>
               </div>
@@ -247,7 +256,6 @@ const BookingSuccess = () => {
           </motion.div>
         )}
 
-        {/* What's Next Section */}
         {appointmentSaved && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -305,7 +313,6 @@ const BookingSuccess = () => {
           </motion.div>
         )}
 
-        {/* Booking Reference */}
         {bookingData && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -319,7 +326,6 @@ const BookingSuccess = () => {
           </motion.div>
         )}
 
-        {/* Back to Home Button */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

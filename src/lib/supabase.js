@@ -2828,11 +2828,15 @@ export const getWebinarRegistrationCount = async (webinarId) => {
  */
 export const checkExistingWebinarRegistration = async (webinarId, email) => {
   try {
+    // Only a *paid* registration counts as a duplicate. Pending registrations
+    // can stack up if a user starts payment and abandons; we don't want to
+    // block them from retrying.
     const { data, error } = await supabase
       .from('webinar_registrations')
       .select('*')
       .eq('webinar_id', webinarId)
       .eq('email', email)
+      .eq('payment_status', 'paid')
       .maybeSingle();
 
     if (error) {
@@ -2845,6 +2849,28 @@ export const checkExistingWebinarRegistration = async (webinarId, email) => {
     console.error('Error in checkExistingWebinarRegistration:', error);
     return null;
   }
+};
+
+/**
+ * Update the payment_status of a webinar registration (e.g. 'pending' -> 'paid'
+ * after PayFast confirms the payment).
+ */
+export const updateWebinarRegistrationPaymentStatus = async (registrationId, paymentStatus, paymentReference = null) => {
+  const update = { payment_status: paymentStatus };
+  if (paymentReference) update.payment_reference = paymentReference;
+
+  const { data, error } = await supabase
+    .from('webinar_registrations')
+    .update(update)
+    .eq('id', registrationId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating webinar registration payment status:', error);
+    throw error;
+  }
+  return data;
 };
 
 /**
@@ -3526,6 +3552,48 @@ export const createConsultationBooking = async (appointmentData) => {
     console.error('Error in createConsultationBooking:', error);
     throw error;
   }
+};
+
+/**
+ * Look up a single consultation booking by its booking_id (e.g. "BOOK-123...").
+ * Used by BookingSuccess to find the booking that was saved before the
+ * PayFast redirect.
+ */
+export const getConsultationBookingByBookingId = async (bookingId) => {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('*')
+    .eq('booking_id', bookingId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching booking by ID:', error);
+    throw error;
+  }
+  return data;
+};
+
+/**
+ * Update only the payment_status of a consultation booking.
+ * Used after PayFast confirms a payment that was started with
+ * payment_status='pending'.
+ */
+export const updateConsultationBookingPaymentStatus = async (bookingId, paymentStatus) => {
+  const { data, error } = await supabase
+    .from('appointments')
+    .update({
+      payment_status: paymentStatus,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('booking_id', bookingId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating booking payment status:', error);
+    throw error;
+  }
+  return data;
 };
 
 /**

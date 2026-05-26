@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaCalendarAlt, FaClock, FaUserMd, FaCheckCircle, FaAward, FaLock } from 'react-icons/fa';
-import { checkExistingWebinarRegistration } from '../../lib/supabase';
+import { checkExistingWebinarRegistration, createWebinarRegistration } from '../../lib/supabase';
 import { redirectToPayFast } from '../../lib/payfast';
 
 const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
@@ -59,7 +59,7 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
     setError('');
 
     try {
-      // Check if already registered
+      // Check if already paid-registered (pending ones don't block retries)
       const existingReg = await checkExistingWebinarRegistration(webinar.id, formData.email);
       if (existingReg) {
         setError('You are already registered for this webinar. Please check your email for details.');
@@ -67,25 +67,36 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
         return;
       }
 
-      // Store form data in localStorage - registration will be created after payment
-      localStorage.setItem('pendingWebinarRegistration', JSON.stringify({
+      // Create the registration NOW (status='pending'). The PayFast return
+      // step or the ITN webhook flips it to 'paid' once payment is confirmed.
+      // Storing the row up-front guarantees the registration exists even if
+      // the browser fails to return after payment. We also stash a small
+      // amount of context in localStorage purely for the success page's UI
+      // (webinar title, formatted date) since those aren't on the
+      // registration row.
+      const registration = await createWebinarRegistration({
         webinarId: webinar.id,
-        title: formData.title,
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         phone: formData.phone,
         profession: formData.profession,
         hpcsaNumber: formData.hpcsaNumber.toUpperCase().replace(/\s/g, ''),
+        paymentStatus: 'pending',
+      });
+
+      localStorage.setItem('pendingWebinarMeta', JSON.stringify({
+        registrationId: registration.id,
+        title: formData.title,
         webinarTitle: webinar.title,
         webinarDate: webinar.date,
         webinarPrice: webinar.price,
       }));
 
-      // Redirect to PayFast for payment (no registration created yet)
-      const tempOrderId = `WEBINAR-PENDING-${Date.now()}`;
+      // The order_id encodes the registration UUID so the success page and
+      // the ITN webhook can locate it.
       redirectToPayFast({
-        order_id: tempOrderId,
+        order_id: `WEBINAR-${registration.id}`,
         customer_name: `${formData.firstName} ${formData.lastName}`,
         customer_email: formData.email,
         total: webinar.price,

@@ -4,7 +4,7 @@ import { FaTimes, FaArrowLeft, FaArrowRight, FaVideo, FaPhone, FaUserMd, FaCredi
 import { redirectToPayFast } from '../../lib/payfast';
 import TimeSlotPicker from './TimeSlotPicker';
 
-import { getConsultationPricing } from '../../lib/supabase';
+import { getConsultationPricing, createConsultationBooking } from '../../lib/supabase';
 
 const BookingModal = ({ isOpen, onClose }) => {
   const [step, setStep] = useState(1); // 1: Choose type, 1.5: Telephonic patient type, 1.75: Session type (single/couples), 2: Select time, 3: Enter details, 4: Payment
@@ -122,22 +122,31 @@ const BookingModal = ({ isOpen, onClose }) => {
       // Determine location for face-to-face
       const location = consultationType === 'face_to_face' ? practiceAddress : null;
 
-      // Store booking data in localStorage for retrieval after payment
-      localStorage.setItem('pendingBooking', JSON.stringify({
+      // Save the appointment to the database BEFORE redirecting to PayFast.
+      // Payment status is 'pending' until PayFast confirms via BookingSuccess
+      // or the ITN webhook. This guarantees the booking exists even if the
+      // browser never returns from PayFast.
+      await createConsultationBooking({
+        bookingId: booking_id,
+        customerName: customerName,
+        customerEmail: customerEmail,
+        customerPhone: customerPhone,
+        consultationType: consultationType,
+        appointmentDate: selectedSlot ? selectedSlot.dateStr : null,
+        startTime: selectedSlot ? selectedSlot.startTime : null,
+        endTime: selectedSlot ? selectedSlot.endTime : null,
+        price: consultationPrice,
+        paymentStatus: 'pending',
+        location: location,
+        reservationId: selectedSlot ? selectedSlot.reservationId : null,
+      });
+
+      // We still drop the patient_type / session_type / etc. into localStorage
+      // purely for the success page's UI (they aren't columns on appointments).
+      localStorage.setItem('pendingBookingMeta', JSON.stringify({
         booking_id,
-        customer_name: customerName,
-        customer_email: customerEmail,
-        customer_phone: customerPhone,
-        consultation_type: consultationType,
-        consultation_price: consultationPrice,
         patient_type: patientType || null,
         session_type: sessionType || null,
-        appointment_date: selectedSlot ? selectedSlot.dateStr : null,
-        start_time: selectedSlot ? selectedSlot.startTime : null,
-        end_time: selectedSlot ? selectedSlot.endTime : null,
-        reservation_id: selectedSlot ? selectedSlot.reservationId : null,
-        location: location,
-        created_at: new Date().toISOString()
       }));
 
       // Get consultation type display name

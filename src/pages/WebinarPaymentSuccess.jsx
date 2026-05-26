@@ -1,8 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FaCheckCircle, FaEnvelope, FaCalendarAlt, FaClock, FaUserMd } from 'react-icons/fa';
-import { createWebinarRegistration } from '../lib/supabase';
+import { FaCheckCircle, FaEnvelope, FaUserMd } from 'react-icons/fa';
+import {
+  getWebinarRegistrationById,
+  updateWebinarRegistrationPaymentStatus,
+} from '../lib/supabase';
 
 const WebinarPaymentSuccess = () => {
   const [searchParams] = useSearchParams();
@@ -16,39 +19,60 @@ const WebinarPaymentSuccess = () => {
       hasProcessed.current = true;
 
       try {
-        // Get pending registration data from localStorage
-        const pendingData = localStorage.getItem('pendingWebinarRegistration');
-        if (!pendingData) {
-          setError('Registration data not found. If you completed payment, please contact support.');
+        // The order_id we passed to PayFast was `WEBINAR-<registration_uuid>`.
+        // PayFast returns it back as `payment_id` (and also `m_payment_id`).
+        const rawId =
+          searchParams.get('payment_id') || searchParams.get('m_payment_id');
+
+        if (!rawId || !rawId.startsWith('WEBINAR-')) {
+          setError(
+            'Registration reference not found. If you completed payment, please contact support.'
+          );
           setUpdating(false);
           return;
         }
 
-        const regData = JSON.parse(pendingData);
-        const paymentRef = searchParams.get('pf_payment_id') || `PAY-${Date.now()}`;
+        const registrationId = rawId.replace(/^WEBINAR-/, '');
+        const pfPaymentRef = searchParams.get('pf_payment_id') || null;
 
-        // NOW create the registration in Supabase (only after payment)
-        const registration = await createWebinarRegistration({
-          webinarId: regData.webinarId,
-          firstName: regData.firstName,
-          lastName: regData.lastName,
-          email: regData.email,
-          phone: regData.phone,
-          profession: regData.profession,
-          hpcsaNumber: regData.hpcsaNumber,
-          paymentStatus: 'paid'
-        });
+        const registration = await getWebinarRegistrationById(registrationId);
 
-        // Format date for the webhook
-        const webinarDate = new Date(regData.webinarDate);
-        const formattedDate = webinarDate.toLocaleDateString('en-ZA', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
+        if (!registration) {
+          setError(
+            'We could not locate your registration. Please contact support.'
+          );
+          setUpdating(false);
+          return;
+        }
 
-        // Trigger payment confirmed webhook
+        // If the ITN webhook already processed this (status === 'paid'),
+        // just show success without sending the webhook again.
+        if (registration.payment_status === 'paid') {
+          setUpdating(false);
+          return;
+        }
+
+        await updateWebinarRegistrationPaymentStatus(
+          registrationId,
+          'paid',
+          pfPaymentRef
+        );
+
+        const meta = JSON.parse(
+          localStorage.getItem('pendingWebinarMeta') || '{}'
+        );
+
+        const webinarDateRaw = registration.webinars?.date;
+        const formattedDate = webinarDateRaw
+          ? new Date(webinarDateRaw).toLocaleDateString('en-ZA', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })
+          : 'Monthly';
+
+        // Fire the Make.com webhook for the payment-confirmed email.
         const webhookUrl = import.meta.env.VITE_MAKE_WEBINAR_APPROVAL_WEBHOOK;
         if (webhookUrl) {
           try {
@@ -58,32 +82,32 @@ const WebinarPaymentSuccess = () => {
               body: JSON.stringify({
                 type: 'webinar_payment_confirmed',
                 registrationId: registration.id,
-                title: regData.title,
-                firstName: regData.firstName,
-                lastName: regData.lastName,
-                email: regData.email,
-                phone: regData.phone,
-                profession: regData.profession,
-                hpcsaNumber: regData.hpcsaNumber,
-                webinarTitle: regData.webinarTitle,
+                title: meta.title || '',
+                firstName: registration.first_name,
+                lastName: registration.last_name,
+                email: registration.email,
+                phone: registration.phone,
+                profession: registration.profession,
+                hpcsaNumber: registration.hpcsa_number,
+                webinarTitle: meta.webinarTitle || registration.webinars?.title || 'Vitamin D Talks',
                 webinarDate: formattedDate,
                 webinarTime: '19h00 - 20h00 SAST',
-                webinarPrice: regData.webinarPrice,
-                paymentReference: paymentRef,
-                timestamp: new Date().toISOString()
-              })
+                webinarPrice: meta.webinarPrice || registration.webinars?.price,
+                paymentReference: pfPaymentRef,
+                timestamp: new Date().toISOString(),
+              }),
             });
           } catch (webhookErr) {
             console.error('Webhook error:', webhookErr);
           }
         }
 
-        // Clear pending data
-        localStorage.removeItem('pendingWebinarRegistration');
-
+        localStorage.removeItem('pendingWebinarMeta');
       } catch (err) {
-        console.error('Error creating registration:', err);
-        setError('Payment received but registration failed. Please contact support.');
+        console.error('Error confirming registration:', err);
+        setError(
+          'Payment received but we hit an issue confirming the registration. Please contact support.'
+        );
       }
       setUpdating(false);
     };
@@ -110,7 +134,6 @@ const WebinarPaymentSuccess = () => {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl shadow-2xl overflow-hidden"
         >
-          {/* Header */}
           <div className="bg-gradient-to-r from-primary-green to-green-dark text-white p-8 text-center">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 rounded-full mb-4">
               <FaCheckCircle className="text-5xl" />
@@ -123,7 +146,6 @@ const WebinarPaymentSuccess = () => {
             </p>
           </div>
 
-          {/* Content */}
           <div className="p-8">
             {error ? (
               <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
