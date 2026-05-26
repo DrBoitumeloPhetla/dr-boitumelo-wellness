@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaCheckCircle, FaHome, FaShoppingBag } from 'react-icons/fa';
-import { createOrder } from '../lib/supabase';
+import { getOrderByOrderId, updateOrderStatus } from '../lib/supabase';
 import { sendOrderConfirmationEmail } from '../lib/emailService';
 import { sendPurchaseCompleted } from '../lib/makeWebhooks';
 import { useCart } from '../context/CartContext';
@@ -13,89 +13,83 @@ const PaymentSuccess = () => {
   const { clearCart } = useCart();
   const [processing, setProcessing] = useState(true);
   const [orderDetails, setOrderDetails] = useState(null);
-  const hasProcessedRef = useRef(false); // Persistent ref to prevent duplicate processing
+  const hasProcessedRef = useRef(false);
 
   useEffect(() => {
-    // Prevent double execution from React Strict Mode or re-renders
-    if (hasProcessedRef.current) {
-      console.log('Already processed in this component instance, skipping...');
-      return;
-    }
+    if (hasProcessedRef.current) return;
 
     const processPayment = async () => {
-      // Get order ID from URL parameters
       const orderId = searchParams.get('m_payment_id') || searchParams.get('order_id');
 
       if (!orderId) {
-        console.error('No order ID found');
+        console.error('No order ID in URL');
         setProcessing(false);
         return;
       }
 
-      // Check if already processed (stored in sessionStorage)
       const processedKey = `order_processed_${orderId}`;
       if (sessionStorage.getItem(processedKey)) {
-        console.log('Order already processed in session, skipping...');
         setProcessing(false);
         return;
       }
-
-      // Mark as processing immediately
       hasProcessedRef.current = true;
 
       try {
-        // Get pending order data from sessionStorage
-        const pendingOrderKey = `pending_order_${orderId}`;
-        const orderDataString = sessionStorage.getItem(pendingOrderKey);
+        // Look up the order that was saved before the PayFast redirect.
+        const order = await getOrderByOrderId(orderId);
 
-        if (!orderDataString) {
-          console.error('No pending order data found for order ID:', orderId);
-          alert('Order data not found. Please contact support with order ID: ' + orderId);
+        if (!order) {
+          console.error('Order not found in database:', orderId);
+          alert(
+            'We could not find your order. Please contact support with order ID: ' +
+              orderId
+          );
           setProcessing(false);
           return;
         }
 
-        // Parse order data
-        const orderData = JSON.parse(orderDataString);
+        const displayOrder = {
+          id: order.order_id,
+          customer_email: order.customer_email,
+          total: parseFloat(order.total),
+        };
 
-        // Update order status to 'processing' (payment confirmed)
-        orderData.status = 'processing';
-        orderData.payment_confirmed_at = new Date().toISOString();
+        // If the order has already been processed (e.g. ITN webhook beat us
+        // to it), just show success — don't re-send emails.
+        const alreadyProcessed =
+          order.status === 'processing' ||
+          order.status === 'completed' ||
+          order.status === 'shipped' ||
+          order.status === 'delivered';
 
-        // Create order in database (NOW, after payment confirmed!)
-        const createdOrder = await createOrder(orderData);
-        console.log('Order created successfully after payment confirmation!');
-        setOrderDetails(createdOrder);
+        if (alreadyProcessed) {
+          setOrderDetails(displayOrder);
+          sessionStorage.setItem(processedKey, 'true');
+          clearCart();
+          setProcessing(false);
+          return;
+        }
 
-        // Send confirmation emails ONLY ONCE
+        await updateOrderStatus(orderId, 'processing');
+
         await sendOrderConfirmationEmail({
-          customer_name: createdOrder.customer_name,
-          customer_email: createdOrder.customer_email,
-          customer_phone: createdOrder.customer_phone,
-          items: createdOrder.items,
-          subtotal: createdOrder.subtotal,
-          shipping: createdOrder.shipping || 0,
-          total: createdOrder.total,
-          order_id: createdOrder.id
+          customer_name: order.customer_name,
+          customer_email: order.customer_email,
+          customer_phone: order.customer_phone,
+          items: order.items,
+          subtotal: order.subtotal,
+          shipping: order.shipping || 0,
+          total: order.total,
+          order_id: order.order_id,
         });
 
-        // Send "Purchase Completed" webhook to cancel abandoned cart flow
-        sendPurchaseCompleted().then(result => {
-          if (result.success) {
-            console.log('✅ Purchase Completed webhook sent successfully');
-          } else {
-            console.warn('⚠️ Failed to send Purchase Completed webhook:', result.error);
-          }
-        });
+        sendPurchaseCompleted().catch((err) =>
+          console.warn('Purchase Completed webhook failed:', err)
+        );
 
-        // Mark as processed and clean up sessionStorage
+        setOrderDetails(displayOrder);
         sessionStorage.setItem(processedKey, 'true');
-        sessionStorage.removeItem(pendingOrderKey);
-
-        // Clear cart
         clearCart();
-
-        console.log('Payment successful! Order created and emails sent.');
       } catch (error) {
         console.error('Error processing payment success:', error);
         alert('There was an error confirming your order. Please contact support.');
@@ -129,7 +123,6 @@ const PaymentSuccess = () => {
         transition={{ duration: 0.5 }}
         className="max-w-2xl w-full bg-white rounded-2xl shadow-2xl p-8 md:p-12 text-center"
       >
-        {/* Success Icon */}
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
@@ -141,7 +134,6 @@ const PaymentSuccess = () => {
           </div>
         </motion.div>
 
-        {/* Success Message */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -155,7 +147,6 @@ const PaymentSuccess = () => {
           </p>
         </motion.div>
 
-        {/* Order Details */}
         {orderDetails && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -183,7 +174,6 @@ const PaymentSuccess = () => {
           </motion.div>
         )}
 
-        {/* What's Next */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -211,7 +201,6 @@ const PaymentSuccess = () => {
           </ul>
         </motion.div>
 
-        {/* Action Buttons */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

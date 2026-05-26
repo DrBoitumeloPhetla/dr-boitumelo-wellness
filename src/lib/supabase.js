@@ -202,6 +202,23 @@ export const createOrder = async (orderData) => {
   return data[0];
 };
 
+// Look up an order by its human-readable order_id (e.g. "ORD-1779460878945").
+// Used by PaymentSuccess to find the order saved before the PayFast redirect,
+// and by the ITN webhook to update payment status server-side.
+export const getOrderByOrderId = async (orderId) => {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('order_id', orderId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching order by ID:', error);
+    throw error;
+  }
+  return data;
+};
+
 export const getAllOrders = async () => {
   const { data, error } = await supabase
     .from('orders')

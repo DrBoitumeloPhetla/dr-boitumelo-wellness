@@ -271,17 +271,19 @@ const CartModal = () => {
       couponCode: appliedAffiliate?.coupon_code || null,
       affiliateId: appliedAffiliate?.id || null,
       total: getGrandTotal(),
-      status: 'pending',
+      status: 'awaiting_payment',
       orderDate: new Date().toISOString()
     };
 
     try {
-      // Store order data in sessionStorage (will be created after payment confirmation)
-      sessionStorage.setItem(`pending_order_${order_id}`, JSON.stringify(orderData));
-      console.log('Order data stored, redirecting to payment...');
+      // Save the order to Supabase BEFORE redirecting to PayFast. This is the
+      // durable record — if the browser fails to return after payment (mobile
+      // tab killed, banking-app handoff, etc.) we still have the order. The
+      // PayFast ITN webhook and the PaymentSuccess page both flip the status
+      // to "processing" once payment is confirmed.
+      await createOrder(orderData);
+      console.log('Order saved as awaiting_payment, redirecting to PayFast...');
 
-      // Redirect to PayFast for payment
-      console.log('Redirecting to PayFast for payment...');
       redirectToPayFast({
         order_id: order_id,
         customer_name: orderData.customer.name,
