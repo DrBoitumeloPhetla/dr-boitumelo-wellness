@@ -6,6 +6,14 @@ import VideoEmbed from '../ui/VideoEmbed';
 const MediaSection = ({ showAllVideos = false }) => {
   const videos = [
     {
+      id: 'RTsE__LNwOQ',
+      title: 'Podcast: Vitamin D'
+    },
+    {
+      id: '8H71XCSkEQA',
+      title: 'Podcast: Vitamin D'
+    },
+    {
       id: 'x-hKdWFwoc8',
       title: 'Health & Wellness Insights'
     },
