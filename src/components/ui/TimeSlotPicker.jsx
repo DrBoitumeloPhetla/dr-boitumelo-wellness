@@ -67,12 +67,14 @@ const TimeSlotPicker = ({ onSlotSelected, sessionId }) => {
     return `${year}-${month}-${day}`;
   };
 
-  // Check if a date is in the past
+  // Block today and earlier — bookings must be made at least one day in advance
+  // so Dr. Boitumelo has planning time. Customer picks tomorrow or later.
   const isPastDate = (date) => {
     if (!date) return true;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return date < today;
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    return date < tomorrow;
   };
 
   // Check if a date is blocked
