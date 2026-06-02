@@ -151,7 +151,7 @@ async function handleBooking(supabase, body) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      event: 'created',
+      event_type: 'created',
       id: booking.booking_id,
       customer_name: booking.customer_name,
       customer_email: booking.customer_email,
