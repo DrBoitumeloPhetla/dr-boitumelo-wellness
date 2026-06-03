@@ -3,8 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaCheckCircle, FaHome, FaCalendarAlt, FaVideo, FaPhone, FaUserMd, FaMapMarkerAlt, FaClock, FaEnvelope } from 'react-icons/fa';
 import {
-  getConsultationBookingByBookingId,
-  updateConsultationBookingPaymentStatus,
+  materializePendingBooking,
   triggerMakeWebhook,
 } from '../lib/supabase';
 import { sendFaceToFaceBooking } from '../lib/makeWebhooks';
@@ -31,19 +30,17 @@ const BookingSuccess = () => {
 
       // Idempotency guard across reloads/redirects in the same session.
       const processedKey = `booking_processed_${bookingId}`;
-      if (sessionStorage.getItem(processedKey)) {
-        const booking = await getConsultationBookingByBookingId(bookingId);
-        if (booking) {
-          setBookingData(booking);
-          setAppointmentSaved(true);
-        }
-        return;
-      }
+      const alreadyProcessed = !!sessionStorage.getItem(processedKey);
 
       try {
-        const booking = await getConsultationBookingByBookingId(bookingId);
+        // Move the pending booking into the appointments table. Returns
+        // wasCreated=true only if THIS call actually inserted the row —
+        // i.e. ITN didn't beat us. Only the creating path is responsible
+        // for firing the Make.com "created" webhook so customers don't
+        // get two confirmation emails.
+        const { appointment, wasCreated } = await materializePendingBooking(bookingId);
 
-        if (!booking) {
+        if (!appointment) {
           setError(
             'We could not find your booking. Please contact support with reference: ' +
               bookingId
@@ -51,44 +48,37 @@ const BookingSuccess = () => {
           return;
         }
 
-        setBookingData(booking);
+        setBookingData(appointment);
 
-        // If the ITN webhook already flipped this to paid, just show success.
-        if (booking.payment_status === 'paid') {
-          setAppointmentSaved(true);
-          sessionStorage.setItem(processedKey, 'true');
-          return;
-        }
+        if (!alreadyProcessed && wasCreated) {
+          const isFaceToFaceNoSlot =
+            appointment.consultation_type === 'face_to_face' && !appointment.appointment_date;
 
-        await updateConsultationBookingPaymentStatus(bookingId, 'paid');
-
-        const isFaceToFaceNoSlot =
-          booking.consultation_type === 'face_to_face' && !booking.appointment_date;
-
-        if (isFaceToFaceNoSlot) {
-          await sendFaceToFaceBooking({
-            booking_id: booking.booking_id,
-            customer_name: booking.customer_name,
-            customer_email: booking.customer_email,
-            customer_phone: booking.customer_phone,
-            consultation_type: booking.consultation_type,
-            consultation_price: booking.price,
-            location: booking.location,
-          });
-        } else {
-          await triggerMakeWebhook('created', {
-            id: booking.booking_id,
-            customer_name: booking.customer_name,
-            customer_email: booking.customer_email,
-            customer_phone: booking.customer_phone,
-            consultation_type: booking.consultation_type,
-            appointment_date: booking.appointment_date,
-            start_time: booking.start_time,
-            end_time: booking.end_time,
-            price: booking.price,
-            location: booking.location,
-            appointment_status: 'scheduled',
-          });
+          if (isFaceToFaceNoSlot) {
+            await sendFaceToFaceBooking({
+              booking_id: appointment.booking_id,
+              customer_name: appointment.customer_name,
+              customer_email: appointment.customer_email,
+              customer_phone: appointment.customer_phone,
+              consultation_type: appointment.consultation_type,
+              consultation_price: appointment.price,
+              location: appointment.location,
+            });
+          } else {
+            await triggerMakeWebhook('created', {
+              id: appointment.booking_id,
+              customer_name: appointment.customer_name,
+              customer_email: appointment.customer_email,
+              customer_phone: appointment.customer_phone,
+              consultation_type: appointment.consultation_type,
+              appointment_date: appointment.appointment_date,
+              start_time: appointment.start_time,
+              end_time: appointment.end_time,
+              price: appointment.price,
+              location: appointment.location,
+              appointment_status: 'scheduled',
+            });
+          }
         }
 
         setAppointmentSaved(true);

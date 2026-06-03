@@ -4,7 +4,7 @@ import { FaTimes, FaArrowLeft, FaArrowRight, FaVideo, FaPhone, FaUserMd, FaCredi
 import { redirectToPayFast } from '../../lib/payfast';
 import TimeSlotPicker from './TimeSlotPicker';
 
-import { getConsultationPricing, createConsultationBooking } from '../../lib/supabase';
+import { getConsultationPricing, createPendingBooking } from '../../lib/supabase';
 
 const BookingModal = ({ isOpen, onClose }) => {
   const [step, setStep] = useState(1); // 1: Choose type, 1.5: Telephonic patient type, 1.75: Session type (single/couples), 2: Select time, 3: Enter details, 4: Payment
@@ -122,11 +122,12 @@ const BookingModal = ({ isOpen, onClose }) => {
       // Determine location for face-to-face
       const location = consultationType === 'face_to_face' ? practiceAddress : null;
 
-      // Save the appointment to the database BEFORE redirecting to PayFast.
-      // Payment status is 'pending' until PayFast confirms via BookingSuccess
-      // or the ITN webhook. This guarantees the booking exists even if the
-      // browser never returns from PayFast.
-      await createConsultationBooking({
+      // Save to the pending_bookings holding table BEFORE redirecting to
+      // PayFast. The real appointment row is only created after PayFast
+      // confirms payment (either via BookingSuccess in the browser, or via
+      // the ITN webhook server-side). Abandoned checkouts never reach the
+      // admin appointments view.
+      await createPendingBooking({
         bookingId: booking_id,
         customerName: customerName,
         customerEmail: customerEmail,
@@ -136,7 +137,6 @@ const BookingModal = ({ isOpen, onClose }) => {
         startTime: selectedSlot ? selectedSlot.startTime : null,
         endTime: selectedSlot ? selectedSlot.endTime : null,
         price: consultationPrice,
-        paymentStatus: 'pending',
         location: location,
         reservationId: selectedSlot ? selectedSlot.reservationId : null,
       });

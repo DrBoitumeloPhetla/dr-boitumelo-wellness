@@ -121,27 +121,70 @@ async function handleOrder(supabase, body) {
 async function handleBooking(supabase, body) {
   const bookingId = body.m_payment_id;
 
-  const { data: booking, error } = await supabase
+  // 1. Already materialized? (Browser path beat us here.) Just clean up.
+  const { data: existing } = await supabase
     .from('appointments')
     .select('*')
     .eq('booking_id', bookingId)
     .maybeSingle();
 
-  if (error || !booking) {
-    console.error('ITN: booking not found', bookingId, error);
+  if (existing) {
+    console.log('ITN: appointment already exists, skipping', bookingId);
+    await supabase.from('pending_bookings').delete().eq('booking_id', bookingId);
     return;
   }
 
-  if (booking.payment_status === 'paid') {
-    console.log('ITN: booking already paid, skipping', bookingId);
+  // 2. Pick up the pending row written by BookingModal before PayFast.
+  const { data: pending, error: pendingErr } = await supabase
+    .from('pending_bookings')
+    .select('*')
+    .eq('booking_id', bookingId)
+    .maybeSingle();
+
+  if (pendingErr || !pending) {
+    console.error('ITN: no pending booking for', bookingId, pendingErr);
     return;
   }
 
-  await supabase
+  // 3. Insert into appointments as paid + scheduled.
+  const { data: appointment, error: insertErr } = await supabase
     .from('appointments')
-    .update({ payment_status: 'paid', updated_at: new Date().toISOString() })
-    .eq('booking_id', bookingId);
+    .insert({
+      booking_id: pending.booking_id,
+      customer_name: pending.customer_name,
+      customer_email: pending.customer_email,
+      customer_phone: pending.customer_phone,
+      consultation_type: pending.consultation_type,
+      appointment_date: pending.appointment_date,
+      start_time: pending.start_time,
+      end_time: pending.end_time,
+      price: pending.price,
+      payment_status: 'paid',
+      appointment_status: 'scheduled',
+      location: pending.location,
+    })
+    .select()
+    .single();
 
+  if (insertErr) {
+    // Race condition — browser materialized between our existence check
+    // and this insert. Let the browser path own the webhook.
+    console.warn('ITN: insert race detected, browser path won', insertErr);
+    await supabase.from('pending_bookings').delete().eq('booking_id', bookingId);
+    return;
+  }
+
+  // 4. Clean up — pending row + slot reservation.
+  await supabase.from('pending_bookings').delete().eq('booking_id', bookingId);
+  if (pending.reservation_id) {
+    try {
+      await supabase.from('slot_reservations').delete().eq('id', pending.reservation_id);
+    } catch (err) {
+      console.error('ITN: failed to cancel reservation', err);
+    }
+  }
+
+  // 5. We created the row — fire the Make.com "created" webhook.
   if (!MAKE_APPOINTMENTS_WEBHOOK) {
     console.warn('ITN: VITE_MAKE_WEBHOOK_APPOINTMENTS not set, skipping webhook');
     return;
@@ -152,16 +195,16 @@ async function handleBooking(supabase, body) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       event_type: 'created',
-      id: booking.booking_id,
-      customer_name: booking.customer_name,
-      customer_email: booking.customer_email,
-      customer_phone: booking.customer_phone,
-      consultation_type: booking.consultation_type,
-      appointment_date: booking.appointment_date,
-      start_time: booking.start_time,
-      end_time: booking.end_time,
-      price: booking.price,
-      location: booking.location,
+      id: appointment.booking_id,
+      customer_name: appointment.customer_name,
+      customer_email: appointment.customer_email,
+      customer_phone: appointment.customer_phone,
+      consultation_type: appointment.consultation_type,
+      appointment_date: appointment.appointment_date,
+      start_time: appointment.start_time,
+      end_time: appointment.end_time,
+      price: appointment.price,
+      location: appointment.location,
       appointment_status: 'scheduled',
     }),
   });

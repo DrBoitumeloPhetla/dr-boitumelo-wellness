@@ -3512,6 +3512,118 @@ export const cancelReservation = async (reservationId) => {
 };
 
 /**
+ * Save the customer's booking to the pending_bookings holding table BEFORE
+ * redirecting to PayFast. The real appointment row is only written after
+ * payment is confirmed (see materializePendingBooking). This keeps
+ * abandoned-checkout rows out of the admin appointments view entirely.
+ */
+export const createPendingBooking = async (data) => {
+  const { data: row, error } = await supabase
+    .from('pending_bookings')
+    .insert({
+      booking_id: data.bookingId,
+      customer_name: data.customerName,
+      customer_email: data.customerEmail,
+      customer_phone: data.customerPhone || null,
+      consultation_type: data.consultationType,
+      appointment_date: data.appointmentDate,
+      start_time: data.startTime,
+      end_time: data.endTime,
+      price: data.price,
+      location: data.location || null,
+      reservation_id: data.reservationId || null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating pending booking:', error);
+    throw error;
+  }
+  return row;
+};
+
+/**
+ * Move a pending booking into the appointments table after PayFast confirms
+ * payment. Idempotent — if the appointment already exists (the ITN webhook
+ * raced us to it, or this is a refresh of the success page), returns the
+ * existing row without re-inserting. Returns { appointment, wasCreated }
+ * so callers can decide whether THEY are responsible for firing the
+ * Make.com "created" webhook (only the path that actually inserts should).
+ */
+export const materializePendingBooking = async (bookingId) => {
+  // 1. Already materialized? Return it; clean up any leftover pending row.
+  const { data: existing } = await supabase
+    .from('appointments')
+    .select('*')
+    .eq('booking_id', bookingId)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase.from('pending_bookings').delete().eq('booking_id', bookingId);
+    return { appointment: existing, wasCreated: false };
+  }
+
+  // 2. Read the pending row.
+  const { data: pending, error: pendingErr } = await supabase
+    .from('pending_bookings')
+    .select('*')
+    .eq('booking_id', bookingId)
+    .maybeSingle();
+
+  if (pendingErr || !pending) {
+    console.error('No pending booking found for', bookingId, pendingErr);
+    return { appointment: null, wasCreated: false };
+  }
+
+  // 3. Insert into appointments as paid + scheduled.
+  const { data: appointment, error: insertErr } = await supabase
+    .from('appointments')
+    .insert({
+      booking_id: pending.booking_id,
+      customer_name: pending.customer_name,
+      customer_email: pending.customer_email,
+      customer_phone: pending.customer_phone,
+      consultation_type: pending.consultation_type,
+      appointment_date: pending.appointment_date,
+      start_time: pending.start_time,
+      end_time: pending.end_time,
+      price: pending.price,
+      payment_status: 'paid',
+      appointment_status: 'scheduled',
+      location: pending.location,
+    })
+    .select()
+    .single();
+
+  if (insertErr) {
+    // Race: ITN inserted between our existence check and our insert.
+    // Resolve by re-fetching and treating as "not created by us".
+    const { data: raced } = await supabase
+      .from('appointments')
+      .select('*')
+      .eq('booking_id', bookingId)
+      .maybeSingle();
+    await supabase.from('pending_bookings').delete().eq('booking_id', bookingId);
+    if (raced) return { appointment: raced, wasCreated: false };
+    console.error('Failed to materialize pending booking:', insertErr);
+    return { appointment: null, wasCreated: false };
+  }
+
+  // 4. Clean up — pending row + slot reservation.
+  await supabase.from('pending_bookings').delete().eq('booking_id', bookingId);
+  if (pending.reservation_id) {
+    try {
+      await cancelReservation(pending.reservation_id);
+    } catch (err) {
+      console.error('Failed to cancel reservation post-materialize:', err);
+    }
+  }
+
+  return { appointment, wasCreated: true };
+};
+
+/**
  * Create a new consultation appointment (after payment success)
  */
 export const createConsultationBooking = async (appointmentData) => {
