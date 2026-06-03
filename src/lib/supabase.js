@@ -3706,19 +3706,6 @@ export const getConsultationBookingsByDate = async (dateStr) => {
 };
 
 /**
- * Format consultation type for display (removes underscores, capitalizes)
- * @param {string} type - The consultation type (e.g., 'face_to_face', 'virtual', 'telephonic')
- * @returns {string} - Formatted type (e.g., 'Face to Face', 'Virtual', 'Telephonic')
- */
-const formatConsultationType = (type) => {
-  if (!type) return '';
-  return type
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-};
-
-/**
  * Trigger Make.com webhook for appointment automations
  * Uses a single webhook URL - use Router module in Make.com to branch by event_type
  * @param {string} webhookType - 'no_show', 'completed', 'rescheduled', 'created'
@@ -3741,24 +3728,21 @@ export const triggerMakeWebhook = async (webhookType, appointmentData) => {
       },
       body: JSON.stringify({
         event_type: webhookType,
-        timestamp: new Date().toISOString(),
-        appointment: {
-          id: appointmentData.id,
-          customer_name: appointmentData.customer_name,
-          customer_email: appointmentData.customer_email,
-          customer_phone: appointmentData.customer_phone,
-          consultation_type: formatConsultationType(appointmentData.consultation_type),
-          appointment_date: appointmentData.appointment_date,
-          start_time: appointmentData.start_time,
-          end_time: appointmentData.end_time,
-          price: appointmentData.price,
-          location: appointmentData.location,
-          status: appointmentData.appointment_status,
-          // For rescheduled events, include old date/time
-          previous_date: appointmentData.previous_date,
-          previous_start_time: appointmentData.previous_start_time,
-          previous_end_time: appointmentData.previous_end_time
-        }
+        id: appointmentData.id,
+        customer_name: appointmentData.customer_name,
+        customer_email: appointmentData.customer_email,
+        customer_phone: appointmentData.customer_phone,
+        consultation_type: appointmentData.consultation_type,
+        appointment_date: appointmentData.appointment_date,
+        start_time: appointmentData.start_time,
+        end_time: appointmentData.end_time,
+        price: appointmentData.price,
+        location: appointmentData.location,
+        appointment_status: appointmentData.appointment_status,
+        // Reschedule events include the previous slot at root too
+        previous_date: appointmentData.previous_date,
+        previous_start_time: appointmentData.previous_start_time,
+        previous_end_time: appointmentData.previous_end_time
       })
     });
 
