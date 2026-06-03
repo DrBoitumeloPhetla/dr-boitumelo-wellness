@@ -779,6 +779,26 @@ const AdminAppointmentsContent = () => {
     return styles[status] || 'bg-gray-100 text-gray-800';
   };
 
+  // Payment status — surfaces which bookings actually paid vs which are
+  // abandoned pre-payment rows (created when the customer clicked Pay then
+  // walked away from PayFast). Without this, every row looks identical.
+  const getPaymentBadge = (status) => {
+    const styles = {
+      'paid': 'bg-green-100 text-green-800 border border-green-300',
+      'pending': 'bg-orange-100 text-orange-800 border border-orange-300',
+      'refunded': 'bg-red-100 text-red-800 border border-red-300',
+      'failed': 'bg-red-100 text-red-800 border border-red-300'
+    };
+    return styles[status] || 'bg-gray-100 text-gray-700 border border-gray-300';
+  };
+
+  const getPaymentLabel = (status) => {
+    if (status === 'paid') return 'Paid';
+    if (status === 'pending') return 'Payment Pending';
+    if (!status) return 'Payment Unknown';
+    return status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
+  };
+
   // Format date
   const formatDate = (dateStr) => {
     return new Date(dateStr).toLocaleDateString('en-ZA', {
@@ -919,14 +939,19 @@ const AdminAppointmentsContent = () => {
                   className={`p-4 ${isToday(appointment.appointment_date) ? 'bg-yellow-50' : ''}`}
                 >
                   {/* Top row: Name + Status */}
-                  <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-start justify-between mb-2 gap-2">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <FaUser className="text-gray-400 flex-shrink-0" />
                       <span className="font-medium text-gray-900 truncate">{appointment.customer_name}</span>
                     </div>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize flex-shrink-0 ml-2 ${getStatusBadge(appointment.appointment_status)}`}>
-                      {(appointment.appointment_status || 'unknown').replace('_', ' ')}
-                    </span>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${getStatusBadge(appointment.appointment_status)}`}>
+                        {(appointment.appointment_status || 'unknown').replace('_', ' ')}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${getPaymentBadge(appointment.payment_status)}`}>
+                        {getPaymentLabel(appointment.payment_status)}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Type + Date */}
@@ -1073,9 +1098,14 @@ const AdminAppointmentsContent = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadge(appointment.appointment_status)}`}>
-                          {(appointment.appointment_status || 'unknown').replace('_', ' ')}
-                        </span>
+                        <div className="flex flex-col gap-1.5 items-start">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadge(appointment.appointment_status)}`}>
+                            {(appointment.appointment_status || 'unknown').replace('_', ' ')}
+                          </span>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${getPaymentBadge(appointment.payment_status)}`}>
+                            {getPaymentLabel(appointment.payment_status)}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
