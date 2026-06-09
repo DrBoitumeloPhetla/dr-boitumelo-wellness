@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaCalendarAlt, FaClock, FaUserMd, FaCheckCircle, FaAward, FaLock } from 'react-icons/fa';
-import { checkExistingWebinarRegistration, createWebinarRegistration } from '../../lib/supabase';
+import { checkExistingWebinarRegistration, createPendingWebinarRegistration } from '../../lib/supabase';
 import { redirectToPayFast } from '../../lib/payfast';
 
 const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
@@ -67,22 +67,20 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
         return;
       }
 
-      // Create the registration NOW (status='pending'). The PayFast return
-      // step or the ITN webhook flips it to 'paid' once payment is confirmed.
-      // Storing the row up-front guarantees the registration exists even if
-      // the browser fails to return after payment. We also stash a small
-      // amount of context in localStorage purely for the success page's UI
-      // (webinar title, formatted date) since those aren't on the
-      // registration row.
-      const registration = await createWebinarRegistration({
+      // Save to the pending_webinar_registrations holding table only — the
+      // real webinar_registrations row is created after payment confirms
+      // (browser path in WebinarPaymentSuccess, or server-side ITN). The
+      // pending row's id is reused for the materialized row, so the
+      // WEBINAR-<id> order reference resolves the same either way.
+      const registration = await createPendingWebinarRegistration({
         webinarId: webinar.id,
+        title: formData.title,
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         phone: formData.phone,
         profession: formData.profession,
         hpcsaNumber: formData.hpcsaNumber.toUpperCase().replace(/\s/g, ''),
-        paymentStatus: 'pending',
       });
 
       localStorage.setItem('pendingWebinarMeta', JSON.stringify({

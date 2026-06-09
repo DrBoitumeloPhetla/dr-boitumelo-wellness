@@ -2,10 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaCheckCircle, FaEnvelope, FaUserMd } from 'react-icons/fa';
-import {
-  getWebinarRegistrationById,
-  updateWebinarRegistrationPaymentStatus,
-} from '../lib/supabase';
+import { materializePendingWebinarRegistration } from '../lib/supabase';
 
 const WebinarPaymentSuccess = () => {
   const [searchParams] = useSearchParams();
@@ -35,7 +32,12 @@ const WebinarPaymentSuccess = () => {
         const registrationId = rawId.replace(/^WEBINAR-/, '');
         const pfPaymentRef = searchParams.get('pf_payment_id') || null;
 
-        const registration = await getWebinarRegistrationById(registrationId);
+        // Move the pending registration into webinar_registrations. Returns
+        // wasCreated=true only if THIS call inserted the row — ITN didn't
+        // beat us. Only the creating path fires the Make.com webhook so
+        // applicants don't get two payment-confirmed emails.
+        const { registration, wasCreated, title: pendingTitle } =
+          await materializePendingWebinarRegistration(registrationId, pfPaymentRef);
 
         if (!registration) {
           setError(
@@ -44,19 +46,6 @@ const WebinarPaymentSuccess = () => {
           setUpdating(false);
           return;
         }
-
-        // If the ITN webhook already processed this (status === 'paid'),
-        // just show success without sending the webhook again.
-        if (registration.payment_status === 'paid') {
-          setUpdating(false);
-          return;
-        }
-
-        await updateWebinarRegistrationPaymentStatus(
-          registrationId,
-          'paid',
-          pfPaymentRef
-        );
 
         const meta = JSON.parse(
           localStorage.getItem('pendingWebinarMeta') || '{}'
@@ -72,33 +61,34 @@ const WebinarPaymentSuccess = () => {
             })
           : 'Monthly';
 
-        // Fire the Make.com webhook for the payment-confirmed email.
-        const webhookUrl = import.meta.env.VITE_MAKE_WEBINAR_APPROVAL_WEBHOOK;
-        if (webhookUrl) {
-          try {
-            await fetch(webhookUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                type: 'webinar_payment_confirmed',
-                registrationId: registration.id,
-                title: meta.title || '',
-                firstName: registration.first_name,
-                lastName: registration.last_name,
-                email: registration.email,
-                phone: registration.phone,
-                profession: registration.profession,
-                hpcsaNumber: registration.hpcsa_number,
-                webinarTitle: meta.webinarTitle || registration.webinars?.title || 'Vitamin D Talks',
-                webinarDate: formattedDate,
-                webinarTime: '19h00 - 20h00 SAST',
-                webinarPrice: meta.webinarPrice || registration.webinars?.price,
-                paymentReference: pfPaymentRef,
-                timestamp: new Date().toISOString(),
-              }),
-            });
-          } catch (webhookErr) {
-            console.error('Webhook error:', webhookErr);
+        if (wasCreated) {
+          const webhookUrl = import.meta.env.VITE_MAKE_WEBINAR_APPROVAL_WEBHOOK;
+          if (webhookUrl) {
+            try {
+              await fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  type: 'webinar_payment_confirmed',
+                  registrationId: registration.id,
+                  title: pendingTitle || meta.title || '',
+                  firstName: registration.first_name,
+                  lastName: registration.last_name,
+                  email: registration.email,
+                  phone: registration.phone,
+                  profession: registration.profession,
+                  hpcsaNumber: registration.hpcsa_number,
+                  webinarTitle: meta.webinarTitle || registration.webinars?.title || 'Vitamin D Talks',
+                  webinarDate: formattedDate,
+                  webinarTime: '19h00 - 20h00 SAST',
+                  webinarPrice: meta.webinarPrice || registration.webinars?.price,
+                  paymentReference: pfPaymentRef,
+                  timestamp: new Date().toISOString(),
+                }),
+              });
+            } catch (webhookErr) {
+              console.error('Webhook error:', webhookErr);
+            }
           }
         }
 

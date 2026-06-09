@@ -212,30 +212,64 @@ async function handleBooking(supabase, body) {
 
 async function handleWebinar(supabase, body) {
   const orderId = body.m_payment_id;
-  const registrationId = orderId.replace(/^WEBINAR-/, '');
+  const pendingId = orderId.replace(/^WEBINAR-/, '');
   const pfPaymentId = body.pf_payment_id || null;
 
-  const { data: registration, error } = await supabase
+  // 1. Already materialized? Browser path beat us — just clean up.
+  const { data: existing } = await supabase
     .from('webinar_registrations')
-    .select('*, webinars(*)')
-    .eq('id', registrationId)
+    .select('id')
+    .eq('id', pendingId)
     .maybeSingle();
 
-  if (error || !registration) {
-    console.error('ITN: webinar registration not found', registrationId, error);
+  if (existing) {
+    console.log('ITN: webinar registration already exists, skipping', pendingId);
+    await supabase.from('pending_webinar_registrations').delete().eq('id', pendingId);
     return;
   }
 
-  if (registration.payment_status === 'paid') {
-    console.log('ITN: webinar registration already paid, skipping', registrationId);
+  // 2. Read the pending row.
+  const { data: pending, error: pendingErr } = await supabase
+    .from('pending_webinar_registrations')
+    .select('*')
+    .eq('id', pendingId)
+    .maybeSingle();
+
+  if (pendingErr || !pending) {
+    console.error('ITN: no pending webinar registration for', pendingId, pendingErr);
     return;
   }
 
-  await supabase
+  // 3. Insert into webinar_registrations as paid, reusing the pending id.
+  const { data: registration, error: insertErr } = await supabase
     .from('webinar_registrations')
-    .update({ payment_status: 'paid', payment_reference: pfPaymentId })
-    .eq('id', registrationId);
+    .insert({
+      id: pending.id,
+      webinar_id: pending.webinar_id,
+      first_name: pending.first_name,
+      last_name: pending.last_name,
+      email: pending.email,
+      phone: pending.phone,
+      profession: pending.profession,
+      hpcsa_number: pending.hpcsa_number,
+      payment_status: 'paid',
+      payment_reference: pfPaymentId,
+    })
+    .select('*, webinars(*)')
+    .single();
 
+  if (insertErr) {
+    // Race condition — browser materialized in parallel. Let browser fire
+    // the webhook.
+    console.warn('ITN: webinar insert race, browser path won', insertErr);
+    await supabase.from('pending_webinar_registrations').delete().eq('id', pendingId);
+    return;
+  }
+
+  // 4. Clean up pending row.
+  await supabase.from('pending_webinar_registrations').delete().eq('id', pendingId);
+
+  // 5. We created the row — fire the Make.com payment-confirmed webhook.
   if (!MAKE_WEBINAR_WEBHOOK) {
     console.warn('ITN: VITE_MAKE_WEBINAR_APPROVAL_WEBHOOK not set, skipping email');
     return;
@@ -254,6 +288,7 @@ async function handleWebinar(supabase, body) {
     body: JSON.stringify({
       type: 'webinar_payment_confirmed',
       registrationId: registration.id,
+      title: pending.title || '',
       firstName: registration.first_name,
       lastName: registration.last_name,
       email: registration.email,

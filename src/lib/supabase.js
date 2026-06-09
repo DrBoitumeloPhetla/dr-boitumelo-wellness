@@ -2569,6 +2569,106 @@ export const getWebinarById = async (webinarId) => {
 /**
  * Create webinar registration
  */
+/**
+ * Save a webinar registration to the pending_webinar_registrations holding
+ * table BEFORE PayFast. The real row in webinar_registrations is only
+ * written after payment is confirmed (see materializePendingWebinarRegistration).
+ * Prevents abandoned-checkout rows from showing in the admin panel.
+ */
+export const createPendingWebinarRegistration = async (data) => {
+  const { data: row, error } = await supabase
+    .from('pending_webinar_registrations')
+    .insert({
+      webinar_id: data.webinarId,
+      title: data.title || null,
+      first_name: data.firstName,
+      last_name: data.lastName,
+      email: data.email,
+      phone: data.phone,
+      profession: data.profession,
+      hpcsa_number: data.hpcsaNumber,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating pending webinar registration:', error);
+    throw error;
+  }
+  return row;
+};
+
+/**
+ * Move a pending webinar registration into webinar_registrations after
+ * PayFast confirms payment. Idempotent — returns the existing row without
+ * re-inserting if the ITN webhook raced ahead. Preserves the pending id
+ * so the WEBINAR-<id> order reference still resolves to the same row.
+ * Returns { registration, wasCreated, title } so only the path that
+ * actually inserted fires the Make.com "payment confirmed" webhook.
+ */
+export const materializePendingWebinarRegistration = async (pendingId, paymentReference = null) => {
+  // 1. Already materialized?
+  const { data: existing } = await supabase
+    .from('webinar_registrations')
+    .select('*, webinars(*)')
+    .eq('id', pendingId)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase.from('pending_webinar_registrations').delete().eq('id', pendingId);
+    return { registration: existing, wasCreated: false, title: null };
+  }
+
+  // 2. Read the pending row.
+  const { data: pending, error: pendingErr } = await supabase
+    .from('pending_webinar_registrations')
+    .select('*')
+    .eq('id', pendingId)
+    .maybeSingle();
+
+  if (pendingErr || !pending) {
+    console.error('No pending webinar registration found for', pendingId, pendingErr);
+    return { registration: null, wasCreated: false, title: null };
+  }
+
+  // 3. Insert into webinar_registrations, reusing the pending id so the
+  //    WEBINAR-<id> reference still points at it.
+  const { data: registration, error: insertErr } = await supabase
+    .from('webinar_registrations')
+    .insert({
+      id: pending.id,
+      webinar_id: pending.webinar_id,
+      first_name: pending.first_name,
+      last_name: pending.last_name,
+      email: pending.email,
+      phone: pending.phone,
+      profession: pending.profession,
+      hpcsa_number: pending.hpcsa_number,
+      payment_status: 'paid',
+      payment_reference: paymentReference,
+    })
+    .select('*, webinars(*)')
+    .single();
+
+  if (insertErr) {
+    // Race: ITN inserted between our existence check and this insert.
+    const { data: raced } = await supabase
+      .from('webinar_registrations')
+      .select('*, webinars(*)')
+      .eq('id', pendingId)
+      .maybeSingle();
+    await supabase.from('pending_webinar_registrations').delete().eq('id', pendingId);
+    if (raced) return { registration: raced, wasCreated: false, title: null };
+    console.error('Failed to materialize pending webinar registration:', insertErr);
+    return { registration: null, wasCreated: false, title: null };
+  }
+
+  // 4. Clean up the pending row.
+  await supabase.from('pending_webinar_registrations').delete().eq('id', pendingId);
+
+  return { registration, wasCreated: true, title: pending.title };
+};
+
 export const createWebinarRegistration = async (registrationData) => {
   try {
     const { data, error } = await supabase
