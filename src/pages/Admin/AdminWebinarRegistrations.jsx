@@ -188,6 +188,7 @@ const AdminWebinarRegistrationsContent = () => {
             hpcsaNumber: selectedRegistration.hpcsa_number,
             webinarTitle: selectedRegistration.webinars?.title,
             webinarDate: formattedDate,
+            webinarPrice: selectedRegistration.webinars?.price || 450,
             rejectionReason: rejectionReason,
             timestamp: new Date().toISOString()
           })
