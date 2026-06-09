@@ -58,32 +58,93 @@ function num(value) {
 async function handleOrder(supabase, body) {
   const orderId = body.m_payment_id;
 
-  const { data: order, error } = await supabase
+  // 1. Already materialized? Browser path beat us. Clean up pending if any.
+  const { data: existing } = await supabase
     .from('orders')
+    .select('order_id')
+    .eq('order_id', orderId)
+    .maybeSingle();
+
+  if (existing) {
+    console.log('ITN: order already exists, skipping', orderId);
+    await supabase.from('pending_orders').delete().eq('order_id', orderId);
+    return;
+  }
+
+  // 2. Read the pending row written by CartModal before PayFast.
+  const { data: pending, error: pendingErr } = await supabase
+    .from('pending_orders')
     .select('*')
     .eq('order_id', orderId)
     .maybeSingle();
 
-  if (error || !order) {
-    console.error('ITN: order not found', orderId, error);
+  if (pendingErr || !pending) {
+    console.error('ITN: no pending order for', orderId, pendingErr);
     return;
   }
 
-  const alreadyProcessed = ['processing', 'completed', 'shipped', 'delivered'].includes(order.status);
-  if (alreadyProcessed) {
-    console.log('ITN: order already processed, skipping', orderId);
-    return;
-  }
+  // 3. Insert into orders as 'processing'.
+  const orderInsert = {
+    order_id: pending.order_id,
+    customer_name: pending.customer_name,
+    customer_email: pending.customer_email,
+    customer_phone: pending.customer_phone,
+    customer_address: pending.customer_address,
+    customer_city: pending.customer_city,
+    customer_postal_code: pending.customer_postal_code,
+    customer_notes: pending.customer_notes,
+    items: pending.items,
+    total: pending.total,
+    status: 'processing',
+    order_date: pending.created_at,
+  };
+  if (pending.subtotal !== null && pending.subtotal !== undefined) orderInsert.subtotal = pending.subtotal;
+  if (pending.shipping !== null && pending.shipping !== undefined) orderInsert.shipping = pending.shipping;
+  if (pending.coupon_code) orderInsert.coupon_code = pending.coupon_code;
+  if (pending.discount_amount) orderInsert.discount_amount = pending.discount_amount;
+  if (pending.affiliate_id) orderInsert.affiliate_id = pending.affiliate_id;
 
-  const { error: updErr } = await supabase
+  const { data: order, error: insertErr } = await supabase
     .from('orders')
-    .update({ status: 'processing' })
-    .eq('order_id', orderId);
-  if (updErr) {
-    console.error('ITN: failed to update order', updErr);
+    .insert([orderInsert])
+    .select()
+    .single();
+
+  if (insertErr) {
+    // Race condition — browser path materialized in parallel. It owns the
+    // confirmation email.
+    console.warn('ITN: order insert race, browser path won', insertErr);
+    await supabase.from('pending_orders').delete().eq('order_id', orderId);
     return;
   }
 
+  // 4. Clean up pending row.
+  await supabase.from('pending_orders').delete().eq('order_id', orderId);
+
+  // 5. Affiliate stats — only credit real, paid sales.
+  if (pending.affiliate_id && pending.subtotal && num(pending.subtotal) > 0) {
+    try {
+      const subtotal = num(pending.subtotal);
+      const { data: aff } = await supabase
+        .from('affiliates')
+        .select('total_sales, total_orders')
+        .eq('id', pending.affiliate_id)
+        .maybeSingle();
+      if (aff) {
+        await supabase
+          .from('affiliates')
+          .update({
+            total_sales: num(aff.total_sales) + subtotal,
+            total_orders: (aff.total_orders || 0) + 1,
+          })
+          .eq('id', pending.affiliate_id);
+      }
+    } catch (err) {
+      console.error('ITN: failed to update affiliate stats:', err);
+    }
+  }
+
+  // 6. We created the order — fire the Make.com order-confirmation webhook.
   if (!MAKE_ORDER_WEBHOOK) {
     console.warn('ITN: VITE_MAKE_ORDER_WEBHOOK not set, skipping email');
     return;

@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaCheckCircle, FaHome, FaShoppingBag } from 'react-icons/fa';
-import { getOrderByOrderId, updateOrderStatus } from '../lib/supabase';
+import { materializePendingOrder } from '../lib/supabase';
 import { sendOrderConfirmationEmail } from '../lib/emailService';
 import { sendPurchaseCompleted } from '../lib/makeWebhooks';
 import { useCart } from '../context/CartContext';
@@ -35,8 +35,11 @@ const PaymentSuccess = () => {
       hasProcessedRef.current = true;
 
       try {
-        // Look up the order that was saved before the PayFast redirect.
-        const order = await getOrderByOrderId(orderId);
+        // Move the pending order into the orders table. wasCreated=true only
+        // if THIS call inserted the row — ITN didn't beat us. Only the
+        // creating path sends the confirmation email + purchase webhook so
+        // the customer doesn't get two emails.
+        const { order, wasCreated } = await materializePendingOrder(orderId);
 
         if (!order) {
           console.error('Order not found in database:', orderId);
@@ -54,38 +57,22 @@ const PaymentSuccess = () => {
           total: parseFloat(order.total),
         };
 
-        // If the order has already been processed (e.g. ITN webhook beat us
-        // to it), just show success — don't re-send emails.
-        const alreadyProcessed =
-          order.status === 'processing' ||
-          order.status === 'completed' ||
-          order.status === 'shipped' ||
-          order.status === 'delivered';
+        if (wasCreated) {
+          await sendOrderConfirmationEmail({
+            customer_name: order.customer_name,
+            customer_email: order.customer_email,
+            customer_phone: order.customer_phone,
+            items: order.items,
+            subtotal: order.subtotal,
+            shipping: order.shipping || 0,
+            total: order.total,
+            order_id: order.order_id,
+          });
 
-        if (alreadyProcessed) {
-          setOrderDetails(displayOrder);
-          sessionStorage.setItem(processedKey, 'true');
-          clearCart();
-          setProcessing(false);
-          return;
+          sendPurchaseCompleted().catch((err) =>
+            console.warn('Purchase Completed webhook failed:', err)
+          );
         }
-
-        await updateOrderStatus(orderId, 'processing');
-
-        await sendOrderConfirmationEmail({
-          customer_name: order.customer_name,
-          customer_email: order.customer_email,
-          customer_phone: order.customer_phone,
-          items: order.items,
-          subtotal: order.subtotal,
-          shipping: order.shipping || 0,
-          total: order.total,
-          order_id: order.order_id,
-        });
-
-        sendPurchaseCompleted().catch((err) =>
-          console.warn('Purchase Completed webhook failed:', err)
-        );
 
         setOrderDetails(displayOrder);
         sessionStorage.setItem(processedKey, 'true');

@@ -133,6 +133,152 @@ export const saveAbandonedLead = async (leadData, type = 'abandoned_cart') => {
 // ============================================
 // ORDERS
 // ============================================
+
+/**
+ * Save the cart to the pending_orders holding table BEFORE redirecting to
+ * PayFast. The real orders row + client record + affiliate stats only land
+ * once payment is confirmed (see materializePendingOrder). Abandoned
+ * checkouts never reach the admin orders view, never inflate client
+ * counts, and never credit affiliates for sales that didn't happen.
+ */
+export const createPendingOrder = async (orderData) => {
+  const insertPayload = {
+    order_id: orderData.id,
+    customer_name: orderData.customer.name,
+    customer_email: orderData.customer.email,
+    customer_phone: orderData.customer.phone,
+    customer_address: orderData.customer.address,
+    customer_city: orderData.customer.city,
+    customer_postal_code: orderData.customer.postalCode,
+    customer_notes: orderData.customer.notes,
+    items: orderData.items,
+    total: orderData.total,
+  };
+  if (orderData.subtotal !== undefined) insertPayload.subtotal = orderData.subtotal;
+  if (orderData.shipping !== undefined) insertPayload.shipping = orderData.shipping;
+  if (orderData.couponCode) insertPayload.coupon_code = orderData.couponCode;
+  if (orderData.discountAmount !== undefined && orderData.discountAmount > 0) {
+    insertPayload.discount_amount = orderData.discountAmount;
+  }
+  if (orderData.affiliateId) insertPayload.affiliate_id = orderData.affiliateId;
+
+  const { data, error } = await supabase
+    .from('pending_orders')
+    .insert([insertPayload])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating pending order:', error);
+    throw error;
+  }
+  return data;
+};
+
+/**
+ * Move a pending order into the orders table after PayFast confirms.
+ * Idempotent — if the order already exists in orders (ITN raced us, or
+ * this is a refresh), returns the existing row without re-inserting.
+ * Side effects (client upsert, affiliate stats) only run when this call
+ * actually creates the order. Returns { order, wasCreated } so only the
+ * creating path fires the customer-facing confirmation email.
+ */
+export const materializePendingOrder = async (orderId) => {
+  // 1. Already materialized? Return it, clean up any leftover pending row.
+  const { data: existing } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('order_id', orderId)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase.from('pending_orders').delete().eq('order_id', orderId);
+    return { order: existing, wasCreated: false };
+  }
+
+  // 2. Read the pending row.
+  const { data: pending, error: pendingErr } = await supabase
+    .from('pending_orders')
+    .select('*')
+    .eq('order_id', orderId)
+    .maybeSingle();
+
+  if (pendingErr || !pending) {
+    console.error('No pending order found for', orderId, pendingErr);
+    return { order: null, wasCreated: false };
+  }
+
+  // 3. Upsert client record (only paying customers become "clients").
+  try {
+    await addOrUpdateClientFromOrder({
+      name: pending.customer_name,
+      email: pending.customer_email,
+      phone: pending.customer_phone,
+      address: pending.customer_address,
+      city: pending.customer_city,
+      postalCode: pending.customer_postal_code,
+      notes: pending.customer_notes,
+    }, 'order');
+  } catch (err) {
+    console.error('Failed to upsert client at materialize:', err);
+    // Non-fatal.
+  }
+
+  // 4. Insert into orders as 'processing' (payment confirmed).
+  const orderInsert = {
+    order_id: pending.order_id,
+    customer_name: pending.customer_name,
+    customer_email: pending.customer_email,
+    customer_phone: pending.customer_phone,
+    customer_address: pending.customer_address,
+    customer_city: pending.customer_city,
+    customer_postal_code: pending.customer_postal_code,
+    customer_notes: pending.customer_notes,
+    items: pending.items,
+    total: pending.total,
+    status: 'processing',
+    order_date: pending.created_at,
+  };
+  if (pending.subtotal !== null && pending.subtotal !== undefined) orderInsert.subtotal = pending.subtotal;
+  if (pending.shipping !== null && pending.shipping !== undefined) orderInsert.shipping = pending.shipping;
+  if (pending.coupon_code) orderInsert.coupon_code = pending.coupon_code;
+  if (pending.discount_amount) orderInsert.discount_amount = pending.discount_amount;
+  if (pending.affiliate_id) orderInsert.affiliate_id = pending.affiliate_id;
+
+  const { data: order, error: insertErr } = await supabase
+    .from('orders')
+    .insert([orderInsert])
+    .select()
+    .single();
+
+  if (insertErr) {
+    // Race: ITN inserted between our existence check and this insert.
+    const { data: raced } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('order_id', orderId)
+      .maybeSingle();
+    await supabase.from('pending_orders').delete().eq('order_id', orderId);
+    if (raced) return { order: raced, wasCreated: false };
+    console.error('Failed to materialize pending order:', insertErr);
+    return { order: null, wasCreated: false };
+  }
+
+  // 5. Clean up pending row.
+  await supabase.from('pending_orders').delete().eq('order_id', orderId);
+
+  // 6. Affiliate stats — only credit real, paid sales.
+  if (pending.affiliate_id && pending.subtotal && pending.subtotal > 0) {
+    try {
+      await updateAffiliateStats(pending.affiliate_id, pending.subtotal);
+    } catch (err) {
+      console.error('Failed to update affiliate stats:', err);
+    }
+  }
+
+  return { order, wasCreated: true };
+};
+
 export const createOrder = async (orderData) => {
   // First, add or update the client
   await addOrUpdateClientFromOrder({

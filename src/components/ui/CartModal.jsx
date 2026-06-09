@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaTrash, FaPlus, FaMinus, FaShoppingBag, FaCheckCircle, FaTag } from 'react-icons/fa';
 import { useCart } from '../../context/CartContext';
-import { createOrder, saveAbandonedLead, getAffiliateByCode } from '../../lib/supabase';
+import { createPendingOrder, saveAbandonedLead, getAffiliateByCode } from '../../lib/supabase';
 import { sendAbandonedCartToMake, sendCheckoutStarted, sendPurchaseCompleted } from '../../lib/makeWebhooks';
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '../../lib/emailService';
 import { redirectToPayFast } from '../../lib/payfast';
@@ -271,18 +271,16 @@ const CartModal = () => {
       couponCode: appliedAffiliate?.coupon_code || null,
       affiliateId: appliedAffiliate?.id || null,
       total: getGrandTotal(),
-      status: 'awaiting_payment',
       orderDate: new Date().toISOString()
     };
 
     try {
-      // Save the order to Supabase BEFORE redirecting to PayFast. This is the
-      // durable record — if the browser fails to return after payment (mobile
-      // tab killed, banking-app handoff, etc.) we still have the order. The
-      // PayFast ITN webhook and the PaymentSuccess page both flip the status
-      // to "processing" once payment is confirmed.
-      await createOrder(orderData);
-      console.log('Order saved as awaiting_payment, redirecting to PayFast...');
+      // Save to pending_orders only — the real orders row + client record +
+      // affiliate stats only land once PayFast confirms payment, via either
+      // PaymentSuccess (browser) or the server-side ITN webhook. Abandoned
+      // checkouts never reach the admin orders view.
+      await createPendingOrder(orderData);
+      console.log('Pending order saved, redirecting to PayFast...');
 
       redirectToPayFast({
         order_id: order_id,
