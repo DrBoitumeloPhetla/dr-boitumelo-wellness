@@ -33,6 +33,7 @@ const AdminOrders = lazy(() => import('./pages/Admin/AdminOrders'));
 const AdminBlog = lazy(() => import('./pages/Admin/AdminBlog'));
 const AdminReviews = lazy(() => import('./pages/Admin/AdminReviews'));
 const AdminDiscounts = lazy(() => import('./pages/Admin/AdminDiscounts'));
+const AdminBrandPartners = lazy(() => import('./pages/Admin/AdminBrandPartners'));
 const AdminContacts = lazy(() => import('./pages/Admin/AdminContacts'));
 const AdminPrescriptionRequests = lazy(() => import('./pages/Admin/AdminPrescriptionRequests'));
 const AdminActivityLogs = lazy(() => import('./pages/Admin/AdminActivityLogs'));
@@ -247,6 +248,11 @@ function App() {
         <Route path="/admin/discounts" element={
           <ProtectedRoute>
             <AdminDiscounts />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/brand-partners" element={
+          <ProtectedRoute>
+            <AdminBrandPartners />
           </ProtectedRoute>
         } />
         <Route path="/admin/contacts" element={

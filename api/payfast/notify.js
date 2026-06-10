@@ -103,6 +103,7 @@ async function handleOrder(supabase, body) {
   if (pending.coupon_code) orderInsert.coupon_code = pending.coupon_code;
   if (pending.discount_amount) orderInsert.discount_amount = pending.discount_amount;
   if (pending.affiliate_id) orderInsert.affiliate_id = pending.affiliate_id;
+  if (pending.brand_partner_id) orderInsert.brand_partner_id = pending.brand_partner_id;
 
   const { data: order, error: insertErr } = await supabase
     .from('orders')

@@ -1,7 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaTimes, FaCalendarAlt, FaClock, FaUserMd, FaCheckCircle, FaAward, FaLock } from 'react-icons/fa';
-import { checkExistingWebinarRegistration, createPendingWebinarRegistration } from '../../lib/supabase';
+import { FaTimes, FaCalendarAlt, FaClock, FaUserMd, FaCheckCircle, FaAward, FaLock, FaHandshake } from 'react-icons/fa';
+import {
+  checkExistingWebinarRegistration,
+  createPendingWebinarRegistration,
+  getBrandPartnerByCode,
+  createBrandPartnerWebinarRegistration,
+} from '../../lib/supabase';
 import { redirectToPayFast } from '../../lib/payfast';
 
 const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
@@ -16,7 +21,37 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [step, setStep] = useState(1); // 1 = form, 2 = confirm
+  const [step, setStep] = useState(1); // 1 = form, 2 = confirm, 3 = brand-partner success
+
+  // Brand partner state — gated behind a "Have a partner code?" toggle so
+  // regular registrants don't even see the field. Auto-validates as they
+  // type (debounced) so the button text flips to "Register for Free" the
+  // moment a valid code is entered.
+  const [showPartnerCode, setShowPartnerCode] = useState(false);
+  const [partnerCode, setPartnerCode] = useState('');
+  const [partner, setPartner] = useState(null);
+  const [partnerStatus, setPartnerStatus] = useState('idle'); // idle | checking | valid | invalid
+
+  useEffect(() => {
+    const trimmed = partnerCode.trim();
+    if (!trimmed) {
+      setPartner(null);
+      setPartnerStatus('idle');
+      return;
+    }
+    setPartnerStatus('checking');
+    const timer = setTimeout(async () => {
+      const found = await getBrandPartnerByCode(trimmed);
+      if (found) {
+        setPartner(found);
+        setPartnerStatus('valid');
+      } else {
+        setPartner(null);
+        setPartnerStatus('invalid');
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [partnerCode]);
 
   const handleChange = (e) => {
     setFormData({
@@ -67,11 +102,58 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
         return;
       }
 
-      // Save to the pending_webinar_registrations holding table only — the
-      // real webinar_registrations row is created after payment confirms
-      // (browser path in WebinarPaymentSuccess, or server-side ITN). The
-      // pending row's id is reused for the materialized row, so the
-      // WEBINAR-<id> order reference resolves the same either way.
+      // Brand partner path — skip PayFast entirely. Insert as paid +
+      // auto-approved with brand_partner_id set, then fire the same
+      // webinar_approved webhook normal approvals use (so the existing
+      // approval email goes out with no price mentioned).
+      if (partner && partnerStatus === 'valid') {
+        const registration = await createBrandPartnerWebinarRegistration({
+          webinarId: webinar.id,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          profession: formData.profession,
+          hpcsaNumber: formData.hpcsaNumber.toUpperCase().replace(/\s/g, ''),
+          brandPartnerId: partner.id,
+        });
+
+        try {
+          const webhookUrl = import.meta.env.VITE_MAKE_WEBINAR_APPROVAL_WEBHOOK;
+          if (webhookUrl) {
+            await fetch(webhookUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'webinar_approved',
+                registrationId: registration.id,
+                title: formData.title,
+                firstName: registration.first_name,
+                lastName: registration.last_name,
+                email: registration.email,
+                phone: registration.phone,
+                profession: registration.profession,
+                hpcsaNumber: registration.hpcsa_number,
+                webinarTitle: registration.webinars?.title || webinar.title,
+                webinarDate: 'Monthly',
+                webinarTime: '19h00 - 20h00 SAST',
+                isBrandPartner: true,
+                partnerName: partner.name,
+                partnerCode: partner.partner_code,
+                timestamp: new Date().toISOString(),
+              }),
+            });
+          }
+        } catch (whErr) {
+          console.error('Brand partner approval webhook failed:', whErr);
+        }
+
+        setStep(3);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Standard paying flow — pending row + PayFast.
       const registration = await createPendingWebinarRegistration({
         webinarId: webinar.id,
         title: formData.title,
@@ -91,8 +173,6 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
         webinarPrice: webinar.price,
       }));
 
-      // The order_id encodes the registration UUID so the success page and
-      // the ITN webhook can locate it.
       redirectToPayFast({
         order_id: `WEBINAR-${registration.id}`,
         customer_name: `${formData.firstName} ${formData.lastName}`,
@@ -121,6 +201,10 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
     });
     setStep(1);
     setError('');
+    setShowPartnerCode(false);
+    setPartnerCode('');
+    setPartner(null);
+    setPartnerStatus('idle');
     onClose();
   };
 
@@ -189,6 +273,56 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
                     <p className="text-sm text-gray-700">
                       <strong className="text-blue-700">Healthcare Practitioners Only:</strong> Your HPCSA/SANC number will be verified before access to the webinar is granted.
                     </p>
+                  </div>
+
+                  {/* Partner code toggle — hidden behind a small link so
+                      regular registrants never see the field, only those
+                      who have a code know to click it. */}
+                  <div className="mb-5">
+                    {!showPartnerCode ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowPartnerCode(true)}
+                        className="text-sm text-primary-green hover:underline flex items-center gap-1.5"
+                      >
+                        <FaHandshake />
+                        Have a partner code?
+                      </button>
+                    ) : (
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                        <label className="block text-xs font-semibold text-purple-800 mb-1.5">
+                          Partner Code
+                        </label>
+                        <input
+                          type="text"
+                          value={partnerCode}
+                          onChange={(e) => setPartnerCode(e.target.value.toUpperCase())}
+                          placeholder="e.g. DRBBP01"
+                          className="w-full px-3 py-2 border border-purple-300 rounded-lg uppercase text-sm focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+                        />
+                        {partnerStatus === 'checking' && (
+                          <p className="text-xs text-gray-500 mt-1.5">Checking…</p>
+                        )}
+                        {partnerStatus === 'valid' && partner && (
+                          <p className="text-xs text-green-700 mt-1.5 font-semibold flex items-center gap-1">
+                            <FaCheckCircle /> Valid — free access via {partner.name}
+                          </p>
+                        )}
+                        {partnerStatus === 'invalid' && (
+                          <p className="text-xs text-red-600 mt-1.5">Invalid code</p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPartnerCode(false);
+                            setPartnerCode('');
+                          }}
+                          className="text-xs text-purple-700 hover:underline mt-2"
+                        >
+                          Hide partner code
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Form */}
@@ -364,16 +498,34 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
                       </div>
                       <div className="flex justify-between pt-2 border-t border-gray-200 mt-2">
                         <span className="text-gray-600 font-semibold">Amount Due:</span>
-                        <span className="text-xl font-bold text-primary-green">R{webinar.price}</span>
+                        {partner && partnerStatus === 'valid' ? (
+                          <div className="text-right">
+                            <span className="block text-sm text-gray-400 line-through">R{webinar.price}</span>
+                            <span className="text-xl font-bold text-purple-700">FREE</span>
+                          </div>
+                        ) : (
+                          <span className="text-xl font-bold text-primary-green">R{webinar.price}</span>
+                        )}
                       </div>
                     </div>
 
-                    <div className="bg-green-50 border-l-4 border-green-400 p-4">
-                      <p className="text-sm text-gray-700">
-                        <strong>Important:</strong> After payment, your HPCSA/SANC number will be verified.
-                        Once approved, you'll receive an email with the Zoom meeting link.
-                      </p>
-                    </div>
+                    {partner && partnerStatus === 'valid' ? (
+                      <div className="bg-purple-50 border-l-4 border-purple-400 p-4">
+                        <p className="text-sm text-gray-700 flex items-start gap-2">
+                          <FaHandshake className="text-purple-600 mt-0.5 flex-shrink-0" />
+                          <span>
+                            <strong>Brand Partner Access ({partner.name}):</strong> Your registration will be confirmed immediately. You'll receive an approval email with details on the next session.
+                          </span>
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="bg-green-50 border-l-4 border-green-400 p-4">
+                        <p className="text-sm text-gray-700">
+                          <strong>Important:</strong> After payment, your HPCSA/SANC number will be verified.
+                          Once approved, you'll receive an email with the Zoom meeting link.
+                        </p>
+                      </div>
+                    )}
 
                     {error && (
                       <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
@@ -392,19 +544,55 @@ const WebinarRegistrationModal = ({ isOpen, onClose, webinar }) => {
                       <button
                         onClick={handleConfirmAndPay}
                         disabled={isSubmitting}
-                        className="flex-1 px-6 py-3 bg-primary-green text-white rounded-lg font-semibold hover:bg-green-dark transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                        className={`flex-1 px-6 py-3 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 ${
+                          partner && partnerStatus === 'valid'
+                            ? 'bg-purple-600 hover:bg-purple-700'
+                            : 'bg-primary-green hover:bg-green-dark'
+                        }`}
                       >
-                        <FaLock className="text-sm" />
-                        {isSubmitting ? 'Processing...' : `Pay R${webinar.price}`}
+                        {partner && partnerStatus === 'valid' ? (
+                          <>
+                            <FaHandshake className="text-sm" />
+                            {isSubmitting ? 'Processing...' : 'Register for Free'}
+                          </>
+                        ) : (
+                          <>
+                            <FaLock className="text-sm" />
+                            {isSubmitting ? 'Processing...' : `Pay R${webinar.price}`}
+                          </>
+                        )}
                       </button>
                     </div>
 
-                    <p className="text-center text-xs text-gray-400 flex items-center justify-center gap-1">
-                      <FaLock className="text-xs" />
-                      Secure payment via PayFast
-                    </p>
+                    {!(partner && partnerStatus === 'valid') && (
+                      <p className="text-center text-xs text-gray-400 flex items-center justify-center gap-1">
+                        <FaLock className="text-xs" />
+                        Secure payment via PayFast
+                      </p>
+                    )}
                   </div>
                 </>
+              )}
+
+              {step === 3 && (
+                <div className="text-center py-6">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
+                    <FaCheckCircle className="text-4xl text-purple-600" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-800 mb-2">You're In!</h3>
+                  <p className="text-gray-600 mb-2">
+                    Your free registration via <strong className="text-purple-700">{partner?.name}</strong> has been confirmed.
+                  </p>
+                  <p className="text-sm text-gray-500 mb-6">
+                    A confirmation email is on the way to <strong>{formData.email}</strong>. You'll receive the Zoom link and session details closer to the date.
+                  </p>
+                  <button
+                    onClick={handleClose}
+                    className="px-8 py-3 bg-primary-green text-white rounded-lg font-semibold hover:bg-green-dark transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
               )}
             </div>
           </motion.div>

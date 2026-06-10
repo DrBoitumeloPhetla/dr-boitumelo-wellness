@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaTrash, FaPlus, FaMinus, FaShoppingBag, FaCheckCircle, FaTag } from 'react-icons/fa';
 import { useCart } from '../../context/CartContext';
-import { createPendingOrder, saveAbandonedLead, getAffiliateByCode } from '../../lib/supabase';
+import { createPendingOrder, saveAbandonedLead, getAffiliateByCode, getBrandPartnerByCode } from '../../lib/supabase';
 import { sendAbandonedCartToMake, sendCheckoutStarted, sendPurchaseCompleted } from '../../lib/makeWebhooks';
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '../../lib/emailService';
 import { redirectToPayFast } from '../../lib/payfast';
@@ -42,6 +42,10 @@ const CartModal = () => {
   const [couponError, setCouponError] = useState('');
   const [couponSuccess, setCouponSuccess] = useState('');
   const [appliedAffiliate, setAppliedAffiliate] = useState(null);
+  // Brand partner code applied at checkout: gives 30% off and tags the
+  // resulting order so Dr. Boitumelo can tell partner orders apart in admin.
+  // Mutually exclusive with affiliate coupons — no stacking.
+  const [appliedBrandPartner, setAppliedBrandPartner] = useState(null);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
   const checkoutStartedSentRef = useRef(false);
@@ -203,7 +207,10 @@ const CartModal = () => {
     return getCartTotal() + getShippingTotal() - couponDiscount;
   };
 
-  // Handle applying coupon code
+  // Handle applying coupon code.
+  // Brand partner codes are checked FIRST — they grant 30% off and tag the
+  // order. If it's not a brand partner code, falls back to the regular
+  // affiliate/coupon system. The two are mutually exclusive (no stacking).
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
       setCouponError('Please enter a coupon code');
@@ -215,18 +222,32 @@ const CartModal = () => {
     setCouponSuccess('');
 
     try {
+      const partner = await getBrandPartnerByCode(couponCode.trim());
+
+      if (partner) {
+        const discount = getCartTotal() * 0.3;
+        setCouponDiscount(discount);
+        setAppliedBrandPartner(partner);
+        setAppliedAffiliate(null);
+        setCouponSuccess('30% partner discount applied!');
+        setCouponError('');
+        return;
+      }
+
       const affiliate = await getAffiliateByCode(couponCode.trim());
 
       if (affiliate) {
         const discount = getCartTotal() * (affiliate.discount_percentage / 100);
         setCouponDiscount(discount);
         setAppliedAffiliate(affiliate);
+        setAppliedBrandPartner(null);
         setCouponSuccess(`${affiliate.discount_percentage}% discount applied!`);
         setCouponError('');
       } else {
         setCouponError('Invalid or expired coupon code');
         setCouponDiscount(0);
         setAppliedAffiliate(null);
+        setAppliedBrandPartner(null);
         setCouponSuccess('');
       }
     } catch (error) {
@@ -234,6 +255,7 @@ const CartModal = () => {
       setCouponError('Error validating coupon. Please try again.');
       setCouponDiscount(0);
       setAppliedAffiliate(null);
+      setAppliedBrandPartner(null);
     } finally {
       setIsApplyingCoupon(false);
     }
@@ -246,6 +268,7 @@ const CartModal = () => {
     setCouponError('');
     setCouponSuccess('');
     setAppliedAffiliate(null);
+    setAppliedBrandPartner(null);
   };
 
   const handleCheckout = async (e) => {
@@ -268,8 +291,9 @@ const CartModal = () => {
       subtotal: getCartTotal(),
       shipping: getShippingTotal(),
       discountAmount: couponDiscount,
-      couponCode: appliedAffiliate?.coupon_code || null,
+      couponCode: appliedBrandPartner?.partner_code || appliedAffiliate?.coupon_code || null,
       affiliateId: appliedAffiliate?.id || null,
+      brandPartnerId: appliedBrandPartner?.id || null,
       total: getGrandTotal(),
       orderDate: new Date().toISOString()
     };
@@ -319,6 +343,7 @@ const CartModal = () => {
     setCouponError('');
     setCouponSuccess('');
     setAppliedAffiliate(null);
+    setAppliedBrandPartner(null);
   };
 
   if (!isCartOpen) return null;
@@ -669,8 +694,8 @@ const CartModal = () => {
                       <span>R{getCartTotal().toFixed(2)}</span>
                     </div>
                     {couponDiscount > 0 && (
-                      <div className="flex justify-between items-center text-sm text-green-600">
-                        <span>Discount ({appliedAffiliate?.coupon_code}):</span>
+                      <div className={`flex justify-between items-center text-sm ${appliedBrandPartner ? 'text-purple-700' : 'text-green-600'}`}>
+                        <span>Discount ({appliedBrandPartner?.partner_code || appliedAffiliate?.coupon_code}):</span>
                         <span>-R{couponDiscount.toFixed(2)}</span>
                       </div>
                     )}
@@ -711,7 +736,20 @@ const CartModal = () => {
                   <FaTag className="text-primary-green" />
                   <span className="font-medium text-sm">Have a coupon code?</span>
                 </div>
-                {appliedAffiliate ? (
+                {appliedBrandPartner ? (
+                  <div className="flex items-center justify-between bg-purple-50 border border-purple-200 rounded-lg p-3">
+                    <div>
+                      <span className="text-purple-700 font-medium">{appliedBrandPartner.partner_code}</span>
+                      <span className="text-purple-600 text-sm ml-2">(30% partner discount)</span>
+                    </div>
+                    <button
+                      onClick={handleRemoveCoupon}
+                      className="text-red-500 hover:text-red-700 text-sm font-medium"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : appliedAffiliate ? (
                   <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
                     <div>
                       <span className="text-green-700 font-medium">{appliedAffiliate.coupon_code}</span>
@@ -756,8 +794,8 @@ const CartModal = () => {
                   <span>R{getCartTotal().toFixed(2)}</span>
                 </div>
                 {couponDiscount > 0 && (
-                  <div className="flex items-center justify-between text-sm text-green-600">
-                    <span>Discount ({appliedAffiliate?.discount_percentage}%):</span>
+                  <div className={`flex items-center justify-between text-sm ${appliedBrandPartner ? 'text-purple-700' : 'text-green-600'}`}>
+                    <span>Discount ({appliedBrandPartner ? '30%' : `${appliedAffiliate?.discount_percentage}%`}):</span>
                     <span>-R{couponDiscount.toFixed(2)}</span>
                   </div>
                 )}

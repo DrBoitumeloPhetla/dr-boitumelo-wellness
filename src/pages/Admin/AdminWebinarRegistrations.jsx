@@ -362,6 +362,11 @@ const AdminWebinarRegistrationsContent = () => {
                         {registration.first_name} {registration.last_name}
                       </p>
                       <p className="text-xs text-gray-500">{registration.profession}</p>
+                      {registration.brand_partners && (
+                        <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-300">
+                          BRAND PARTNER · {registration.brand_partners.name}
+                        </span>
+                      )}
                     </div>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border flex-shrink-0 ml-2 ${getStatusBadge(registration.status)}`}>
                       {registration.status?.toUpperCase()}
@@ -493,7 +498,14 @@ const AdminWebinarRegistrationsContent = () => {
                           <div className="font-medium text-gray-900">
                             {registration.first_name} {registration.last_name}
                           </div>
-                          <div className="text-gray-500 flex items-center gap-1">
+                          {registration.brand_partners && (
+                            <div className="mt-0.5">
+                              <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-300">
+                                BRAND PARTNER · {registration.brand_partners.name}
+                              </span>
+                            </div>
+                          )}
+                          <div className="text-gray-500 flex items-center gap-1 mt-1">
                             <FaEnvelope className="text-xs" />
                             {registration.email}
                           </div>

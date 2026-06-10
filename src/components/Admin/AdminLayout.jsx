@@ -82,6 +82,7 @@ const AdminLayoutInner = ({ children }) => {
     { path: '/admin/clients', icon: FaUsers, label: 'Supplement Buyers', notificationKey: 'clients', requireSuperAdmin: false },
     { path: '/admin/products', icon: FaBoxes, label: 'Products', notificationKey: null, requireSuperAdmin: false },
     { path: '/admin/discounts', icon: FaTag, label: 'Discounts & Sales', notificationKey: null, requireSuperAdmin: false },
+    { path: '/admin/brand-partners', icon: FaHandshake, label: 'Brand Partners', notificationKey: null, requireSuperAdmin: false },
     { path: '/admin/orders', icon: FaShoppingCart, label: 'Orders', notificationKey: 'orders', requireSuperAdmin: false },
     { path: '/admin/prescription-requests', icon: FaPrescriptionBottle, label: 'Prescription Requests', notificationKey: 'prescriptionRequests', requireSuperAdmin: false },
     { path: '/admin/appointments', icon: FaCalendarAlt, label: 'Consultations', notificationKey: 'consultations', requireSuperAdmin: false },

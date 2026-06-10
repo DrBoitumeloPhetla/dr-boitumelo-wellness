@@ -161,6 +161,7 @@ export const createPendingOrder = async (orderData) => {
     insertPayload.discount_amount = orderData.discountAmount;
   }
   if (orderData.affiliateId) insertPayload.affiliate_id = orderData.affiliateId;
+  if (orderData.brandPartnerId) insertPayload.brand_partner_id = orderData.brandPartnerId;
 
   const { data, error } = await supabase
     .from('pending_orders')
@@ -244,6 +245,7 @@ export const materializePendingOrder = async (orderId) => {
   if (pending.coupon_code) orderInsert.coupon_code = pending.coupon_code;
   if (pending.discount_amount) orderInsert.discount_amount = pending.discount_amount;
   if (pending.affiliate_id) orderInsert.affiliate_id = pending.affiliate_id;
+  if (pending.brand_partner_id) orderInsert.brand_partner_id = pending.brand_partner_id;
 
   const { data: order, error: insertErr } = await supabase
     .from('orders')
@@ -368,7 +370,7 @@ export const getOrderByOrderId = async (orderId) => {
 export const getAllOrders = async () => {
   const { data, error } = await supabase
     .from('orders')
-    .select('*')
+    .select('*, brand_partners(id, name, partner_code)')
     .order('order_date', { ascending: false });
 
   if (error) {
@@ -391,7 +393,8 @@ export const getAllOrders = async () => {
     items: order.items,
     total: parseFloat(order.total),
     status: order.status,
-    orderDate: order.order_date
+    orderDate: order.order_date,
+    brandPartner: order.brand_partners || null
   }));
 };
 
@@ -425,6 +428,139 @@ export const updateOrderStatus = async (orderId, status) => {
     status: order.status,
     order_date: order.order_date
   };
+};
+
+// ============================================
+// BRAND PARTNERS
+// ============================================
+//
+// Brand partners are doctors Dr. Boitumelo gives perks to (free Vitamin D
+// Talks access + 30% off orders) in exchange for partnership. They have a
+// single record with a unique code (e.g. DRBBP01..DRBBP10). When that code
+// is entered at webinar signup it grants free + auto-approved registration;
+// when entered at the cart it applies 30% off and tags the order so Dr.
+// can tell partner orders apart from regular ones.
+
+/**
+ * Look up an active brand partner by their partner code. Returns null if
+ * the code is unknown or the partner is deactivated — used to silently
+ * fail invalid/expired codes per the requested "just say invalid" UX.
+ */
+export const getBrandPartnerByCode = async (code) => {
+  if (!code) return null;
+  const { data, error } = await supabase
+    .from('brand_partners')
+    .select('*')
+    .eq('partner_code', code.trim().toUpperCase())
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error looking up brand partner:', error);
+    return null;
+  }
+  return data;
+};
+
+export const getAllBrandPartners = async () => {
+  const { data, error } = await supabase
+    .from('brand_partners')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching brand partners:', error);
+    throw error;
+  }
+  return data || [];
+};
+
+export const createBrandPartner = async ({ name, contactEmail, partnerCode, notes }) => {
+  const { data, error } = await supabase
+    .from('brand_partners')
+    .insert({
+      name,
+      contact_email: contactEmail || null,
+      partner_code: partnerCode.trim().toUpperCase(),
+      notes: notes || null,
+      is_active: true,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating brand partner:', error);
+    throw error;
+  }
+  return data;
+};
+
+export const updateBrandPartner = async (id, fields) => {
+  const update = {};
+  if (fields.name !== undefined) update.name = fields.name;
+  if (fields.contactEmail !== undefined) update.contact_email = fields.contactEmail || null;
+  if (fields.partnerCode !== undefined) update.partner_code = fields.partnerCode.trim().toUpperCase();
+  if (fields.notes !== undefined) update.notes = fields.notes || null;
+  if (fields.isActive !== undefined) update.is_active = fields.isActive;
+
+  const { data, error } = await supabase
+    .from('brand_partners')
+    .update(update)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating brand partner:', error);
+    throw error;
+  }
+  return data;
+};
+
+export const deleteBrandPartner = async (id) => {
+  const { error } = await supabase
+    .from('brand_partners')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting brand partner:', error);
+    throw error;
+  }
+  return true;
+};
+
+/**
+ * Create a webinar registration for a brand partner — bypasses the
+ * pending_webinar_registrations holding flow and PayFast entirely.
+ * Inserts directly into webinar_registrations as payment_status='paid'
+ * and status='approved', with brand_partner_id linking back to the
+ * partner. Caller still fires the Make.com webinar_approved webhook so
+ * the applicant gets the existing "you're confirmed" email.
+ */
+export const createBrandPartnerWebinarRegistration = async (data) => {
+  const { data: row, error } = await supabase
+    .from('webinar_registrations')
+    .insert({
+      webinar_id: data.webinarId,
+      first_name: data.firstName,
+      last_name: data.lastName,
+      email: data.email,
+      phone: data.phone,
+      profession: data.profession,
+      hpcsa_number: data.hpcsaNumber,
+      payment_status: 'paid',
+      status: 'approved',
+      brand_partner_id: data.brandPartnerId,
+    })
+    .select('*, webinars(*), brand_partners(id, name, partner_code)')
+    .single();
+
+  if (error) {
+    console.error('Error creating brand partner webinar registration:', error);
+    throw error;
+  }
+  return row;
 };
 
 // ============================================
@@ -2917,6 +3053,11 @@ export const getAllWebinarRegistrations = async () => {
           date,
           time,
           price
+        ),
+        brand_partners (
+          id,
+          name,
+          partner_code
         )
       `)
       .order('created_at', { ascending: false });

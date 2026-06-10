@@ -252,6 +252,11 @@ const AdminOrdersContent = () => {
                       <div>
                         <p className="text-sm text-gray-500 mb-1">Customer</p>
                         <p className="font-medium">{order.customer.name}</p>
+                        {order.brandPartner && (
+                          <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-300">
+                            BRAND PARTNER · {order.brandPartner.name}
+                          </span>
+                        )}
                         <p className="text-sm text-gray-600">{order.customer.email}</p>
                         <p className="text-sm text-gray-600">{order.customer.phone}</p>
                       </div>
