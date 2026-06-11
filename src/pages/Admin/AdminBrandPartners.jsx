@@ -91,10 +91,11 @@ const AdminBrandPartnersContent = () => {
       load();
     } catch (err) {
       console.error('Error saving partner:', err);
+      const detail = err?.message || err?.details || err?.hint || err?.code || '';
       if (err.code === '23505' || /unique/i.test(err.message || '')) {
-        setError('That partner code is already in use.');
+        setError(`That partner code is already in use. (${detail})`);
       } else {
-        setError('Failed to save. Check the values and try again.');
+        setError(`Failed to save: ${detail || 'check the values and try again.'}`);
       }
     } finally {
       setSaving(false);
