@@ -35,6 +35,10 @@ const CartModal = () => {
     postalCode: '',
     notes: '',
   });
+  // Lock the Proceed button while the pending_orders insert is in flight so
+  // the customer can't fire multiple submissions if Supabase is slow to
+  // respond (which previously produced one alert per click).
+  const [isSubmittingCheckout, setIsSubmittingCheckout] = useState(false);
 
   // Coupon code state
   const [couponCode, setCouponCode] = useState('');
@@ -273,6 +277,8 @@ const CartModal = () => {
 
   const handleCheckout = async (e) => {
     e.preventDefault();
+    if (isSubmittingCheckout) return; // belt-and-braces against rapid clicks
+    setIsSubmittingCheckout(true);
 
     // Prepare order data
     const order_id = 'ORD-' + Date.now();
@@ -299,10 +305,6 @@ const CartModal = () => {
     };
 
     try {
-      // Save to pending_orders only — the real orders row + client record +
-      // affiliate stats only land once PayFast confirms payment, via either
-      // PaymentSuccess (browser) or the server-side ITN webhook. Abandoned
-      // checkouts never reach the admin orders view.
       await createPendingOrder(orderData);
       console.log('Pending order saved, redirecting to PayFast...');
 
@@ -313,10 +315,17 @@ const CartModal = () => {
         total: getGrandTotal(),
         items: cartItems
       });
+      // We're navigating away — no need to clear isSubmittingCheckout here.
 
     } catch (error) {
       console.error('Error processing checkout:', error);
-      alert('There was an error processing your order. Please try again.');
+      const detail = error?.message || error?.details || '';
+      alert(
+        detail
+          ? `There was an error processing your order: ${detail}`
+          : 'There was an error processing your order. Please try again.'
+      );
+      setIsSubmittingCheckout(false);
     }
   };
 
@@ -715,12 +724,17 @@ const CartModal = () => {
                   <button
                     type="button"
                     onClick={() => setShowCheckout(false)}
-                    className="px-6 py-3 text-primary-green hover:bg-sage rounded-lg transition-colors"
+                    disabled={isSubmittingCheckout}
+                    className="px-6 py-3 text-primary-green hover:bg-sage rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     ← Back to Cart
                   </button>
-                  <button type="submit" className="btn-primary flex-1">
-                    Proceed to Payment
+                  <button
+                    type="submit"
+                    disabled={isSubmittingCheckout}
+                    className="btn-primary flex-1 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {isSubmittingCheckout ? 'Processing…' : 'Proceed to Payment'}
                   </button>
                 </div>
               </form>
